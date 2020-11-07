@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5f8ce5b8d2f6e7b6ad56e2a67ade612f68c3489ab587c2467912512e0717e8b8
+-- hash: 921637bade538e439863212801607930ffd57644a40a4bd9803405c38f38b4ef
 
 name:           thock
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
   exposed-modules:
       Lib
       Thock
+      UI
   other-modules:
       Paths_thock
   hs-source-dirs:
@@ -36,7 +37,10 @@ library
   build-depends:
       base >=4.7 && <5
     , brick
+    , microlens
+    , microlens-th
     , text
+    , vty
   default-language: Haskell2010
 
 executable thock-exe
@@ -49,8 +53,11 @@ executable thock-exe
   build-depends:
       base >=4.7 && <5
     , brick
+    , microlens
+    , microlens-th
     , text
     , thock
+    , vty
   default-language: Haskell2010
 
 test-suite thock-test
@@ -64,6 +71,9 @@ test-suite thock-test
   build-depends:
       base >=4.7 && <5
     , brick
+    , microlens
+    , microlens-th
     , text
     , thock
+    , vty
   default-language: Haskell2010
