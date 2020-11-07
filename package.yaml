@@ -21,6 +21,8 @@ description:         Please see the README on GitHub at <https://github.com/rmeh
 
 dependencies:
 - base >= 4.7 && < 5
+- brick
+- text
 
 library:
   source-dirs: src
@@ -33,6 +35,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - thock
 
@@ -44,5 +47,6 @@ tests:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - thock

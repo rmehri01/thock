@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e010117ceaf765a0637b421703235b47aa97585fac7d464b3ebbde1acae143bc
+-- hash: 5f8ce5b8d2f6e7b6ad56e2a67ade612f68c3489ab587c2467912512e0717e8b8
 
 name:           thock
 version:        0.1.0.0
@@ -28,12 +28,15 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Thock
   other-modules:
       Paths_thock
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , brick
+    , text
   default-language: Haskell2010
 
 executable thock-exe
@@ -42,9 +45,11 @@ executable thock-exe
       Paths_thock
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       base >=4.7 && <5
+    , brick
+    , text
     , thock
   default-language: Haskell2010
 
@@ -55,8 +60,10 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       base >=4.7 && <5
+    , brick
+    , text
     , thock
   default-language: Haskell2010
