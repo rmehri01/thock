@@ -16,14 +16,17 @@ draw :: Game -> [Widget Name]
 draw g = [txt (g ^. prompt) <=> renderEditor (txt . T.unlines) True (g ^. input)]
 
 handleKey :: Game -> BrickEvent Name e -> EventM Name (Next Game)
-handleKey g = undefined
+handleKey g (VtyEvent ev) =
+  case ev of
+    V.EvKey V.KEsc [] -> M.halt g
+    _ -> handleEventLensed g input E.handleEditorEvent ev >>= M.continue
+handleKey st _ = M.continue st
 
 theMap :: A.AttrMap
 theMap =
   A.attrMap
     V.defAttr
-    [ (E.editAttr, V.white `on` V.blue),
-      (E.editFocusedAttr, V.black `on` V.yellow)
+    [ (E.editFocusedAttr, V.black `on` V.yellow)
     ]
 
 theApp :: M.App Game e Name
