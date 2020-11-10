@@ -26,7 +26,9 @@ drawProgressBar g = addBorder "progress" (P.progressBar (Just (show $ amountDone
     amountDone = progress g
 
 drawPrompt :: Game -> Widget Name
-drawPrompt g = addBorder "prompt" (C.center $ txt (T.unwords $ getText $ g ^. prompt))
+drawPrompt g = addBorder "prompt" (C.center textWidget)
+  where
+    textWidget = txt (T.unwords $ getText $ g ^. prompt) -- TODO: colour attributes for correct and incorrect, bolding also nice
 
 drawInput :: Game -> Widget Name
 drawInput g = addBorder "input" (renderEditor (txt . T.unlines) True (g ^. input))
