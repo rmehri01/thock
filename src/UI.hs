@@ -11,7 +11,6 @@ import qualified Brick.Widgets.Center as C
 import Brick.Widgets.Edit
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
-import Data.Maybe
 import qualified Data.Text as T
 import Data.Text.Zipper
 import qualified Graphics.Vty as V
@@ -62,6 +61,5 @@ theApp =
 
 run :: IO ()
 run = do
-  g <- M.defaultMain theApp initializeGame
-  print $ g ^. prompt
+  _ <- M.defaultMain theApp initializeGame
   return ()

@@ -29,7 +29,22 @@ progress g = ((/) `on` fromIntegral) correct total
     promptCursor = g ^. prompt
 
 movePromptCursor :: Game -> Game
-movePromptCursor g = undefined
+movePromptCursor g = movePromptByN move g
+  where
+    move = mostCorrect g - col
+    (_, col) = cursorPosition (g ^. prompt)
+
+movePromptByN :: Int -> Game -> Game
+movePromptByN n g
+  | n < 0 = movePromptByN (n + 1) (g & prompt %~ moveLeft)
+  | n == 0 = g
+  | n > 0 = movePromptByN (n - 1) (g & prompt %~ moveRight)
+
+mostCorrect :: Game -> Int
+mostCorrect g = length $ takeWhile (uncurry (==)) $ T.zip currentWord currentInput
+  where
+    currentInput = head $ E.getEditContents (g ^. input)
+    currentWord = currentLine (g ^. prompt)
 
 initializeGame :: Game
 initializeGame =
