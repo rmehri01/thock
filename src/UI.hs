@@ -11,23 +11,26 @@ import qualified Brick.Widgets.Center as C
 import Brick.Widgets.Edit
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
-import qualified Data.Function as F
+import Data.Maybe
 import qualified Data.Text as T
+import Data.Text.Zipper
 import qualified Graphics.Vty as V
 import Lens.Micro
 import Thock
 
 draw :: Game -> [Widget Name]
-draw g = [progressWidget <=> promptWidget <=> inputWidget]
-  where
-    progressWidget = drawProgressBar g
-    promptWidget = addBorder "prompt" (C.center $ txt (g ^. prompt))
-    inputWidget = addBorder "input" (renderEditor (txt . T.unlines) True (g ^. input))
+draw g = [drawProgressBar g <=> drawPrompt g <=> drawInput g]
 
 drawProgressBar :: Game -> Widget Name
-drawProgressBar g = addBorder "progress" (P.progressBar (Just (show $ progressPercent * 100)) progressPercent)
+drawProgressBar g = addBorder "progress" (P.progressBar (Just (show $ amountDone * 100)) amountDone)
   where
-    progressPercent = ((/) `F.on` fromIntegral) (T.length (T.unwords $ E.getEditContents $ g ^. input)) (T.length (g ^. prompt))
+    amountDone = progress g
+
+drawPrompt :: Game -> Widget Name
+drawPrompt g = addBorder "prompt" (C.center $ txt (T.unwords $ getText $ g ^. prompt))
+
+drawInput :: Game -> Widget Name
+drawInput g = addBorder "input" (renderEditor (txt . T.unlines) True (g ^. input))
 
 addBorder :: T.Text -> Widget Name -> Widget Name
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
@@ -36,7 +39,7 @@ handleKey :: Game -> BrickEvent Name e -> EventM Name (Next Game)
 handleKey g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt g
-    _ -> handleEventLensed g input E.handleEditorEvent ev >>= M.continue
+    _ -> handleEventLensed g input E.handleEditorEvent ev >>= M.continue . movePromptCursor
 handleKey st _ = M.continue st
 
 theMap :: A.AttrMap
@@ -59,5 +62,6 @@ theApp =
 
 run :: IO ()
 run = do
-  _ <- M.defaultMain theApp initializeGame
+  g <- M.defaultMain theApp initializeGame
+  print $ g ^. prompt
   return ()

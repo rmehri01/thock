@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 921637bade538e439863212801607930ffd57644a40a4bd9803405c38f38b4ef
+-- hash: 5967e99179f13f00e2d0e2690785216c7bf68eca3605e1ee16c8db34d0b2642f
 
 name:           thock
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
     , microlens
     , microlens-th
     , text
+    , text-zipper
     , vty
   default-language: Haskell2010
 
@@ -56,6 +57,7 @@ executable thock-exe
     , microlens
     , microlens-th
     , text
+    , text-zipper
     , thock
     , vty
   default-language: Haskell2010
@@ -74,6 +76,7 @@ test-suite thock-test
     , microlens
     , microlens-th
     , text
+    , text-zipper
     , thock
     , vty
   default-language: Haskell2010

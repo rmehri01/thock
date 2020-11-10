@@ -25,6 +25,7 @@ dependencies:
 - microlens
 - microlens-th
 - text
+- text-zipper
 - vty
 
 library:
