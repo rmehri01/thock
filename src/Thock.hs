@@ -22,11 +22,16 @@ makeLenses ''Game
 progress :: Game -> Float
 progress g = ((/) `on` fromIntegral) correct total
   where
-    correct = col + sum (take row wordLengths) -- TODO: doesn't account for spaces
-    total = sum wordLengths
-    wordLengths = lineLengths promptCursor
-    (row, col) = cursorPosition promptCursor
+    correct = numCorrectChars g
+    total = T.length $ T.unwords $ getText promptCursor
     promptCursor = g ^. prompt
+
+numCorrectChars :: Game -> Int
+numCorrectChars g = correctBefore + col
+  where
+    correctBefore = T.length $ foldMap (`T.snoc` ' ') $ take row $ getText tz
+    (row, col) = cursorPosition tz
+    tz = g ^. prompt
 
 movePromptCursor :: Game -> Game
 movePromptCursor g =
@@ -35,7 +40,7 @@ movePromptCursor g =
     else g & prompt %~ movePromptByN moveAmount
   where
     currentWordFinished = currentInput == T.snoc currentWord ' '
-    moveAmount = mostCorrect currentWord currentInput - col
+    moveAmount = numCorrectCurrentWord g - col
     (_, col) = cursorPosition (g ^. prompt)
     currentInput = head $ E.getEditContents (g ^. input)
     currentWord = currentLine (g ^. prompt)
@@ -46,11 +51,19 @@ movePromptByN n tz
   | n == 0 = tz
   | n > 0 = movePromptByN (n - 1) (moveRight tz)
 
-mostCorrect :: T.Text -> T.Text -> Int
-mostCorrect word = length . takeWhile (uncurry (==)) . T.zip word
+numCorrectCurrentWord :: Game -> Int
+numCorrectCurrentWord g = length $ takeWhile (uncurry (==)) $ T.zip currentWord currentInput
+  where
+    currentWord = currentLine (g ^. prompt)
+    currentInput = head $ E.getEditContents (g ^. input)
+
+numIncorrectChars :: Game -> Int
+numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
+  where
+    currentInput = head $ E.getEditContents (g ^. input)
 
 initializeGame :: Game
 initializeGame =
   Game
-    (textZipper ["Placeholder", "prompt!"] Nothing)
+    (textZipper ["Placeholder", "prompt", "with", "some", "extra", "text!"] Nothing)
     (E.editor Thock (Just 1) "")

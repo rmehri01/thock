@@ -8,7 +8,6 @@ import qualified Brick.Main as M
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import Brick.Widgets.Edit
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.Text as T
@@ -21,17 +20,25 @@ draw :: Game -> [Widget Name]
 draw g = [drawProgressBar g <=> drawPrompt g <=> drawInput g]
 
 drawProgressBar :: Game -> Widget Name
-drawProgressBar g = addBorder "progress" (P.progressBar (Just (show $ amountDone * 100)) amountDone)
+drawProgressBar g = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
   where
+    percentStr = show percentDone ++ "%"
+    percentDone = floor (amountDone * 100) :: Int
     amountDone = progress g
 
 drawPrompt :: Game -> Widget Name
 drawPrompt g = addBorder "prompt" (C.center textWidget)
   where
-    textWidget = txt (T.unwords $ getText $ g ^. prompt) -- TODO: colour attributes for correct and incorrect, bolding also nice
+    textWidget = correctWidget <+> incorrectWidget <+> restWidget
+    correctWidget = withAttr "correct" $ txt correctText
+    incorrectWidget = withAttr "incorrect" $ txt incorrectText
+    restWidget = txt restText'
+    (incorrectText, restText') = T.splitAt (numIncorrectChars g) restText
+    (correctText, restText) = T.splitAt (numCorrectChars g) allText
+    allText = T.unwords $ getText $ g ^. prompt
 
 drawInput :: Game -> Widget Name
-drawInput g = addBorder "input" (renderEditor (txt . T.unlines) True (g ^. input))
+drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. input))
 
 addBorder :: T.Text -> Widget Name -> Widget Name
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
@@ -48,7 +55,9 @@ theMap =
   A.attrMap
     V.defAttr
     [ (P.progressCompleteAttr, V.black `on` V.white),
-      (P.progressIncompleteAttr, V.white `on` V.black)
+      (P.progressIncompleteAttr, V.white `on` V.black),
+      ("correct", fg V.green),
+      ("incorrect", bg V.red)
     ]
 
 theApp :: M.App Game e Name
