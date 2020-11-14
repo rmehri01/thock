@@ -9,6 +9,7 @@ import qualified Data.Text as T
 import Data.Text.Zipper
 import Lens.Micro
 import Lens.Micro.TH
+import Quotes
 
 data Name = Thock deriving (Ord, Show, Eq)
 
@@ -62,8 +63,8 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
-initializeGame :: T.Text -> Game
-initializeGame t =
+initializeGame :: Quote -> Game
+initializeGame q =
   Game
-    (textZipper (T.words t) Nothing)
+    (textZipper (T.words (q ^. text)) Nothing)
     (E.editor Thock (Just 1) "")

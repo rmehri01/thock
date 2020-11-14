@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Quotes where
 
@@ -6,19 +7,25 @@ import Data.Aeson
 import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
+import Lens.Micro.TH
 import System.Random
 
 data Quote = Quote
-  { text :: T.Text,
-    source :: T.Text,
-    length :: Int
+  { _text :: T.Text,
+    _source :: T.Text,
+    _numChars :: Int
   }
   deriving (Show, Generic)
 
-instance FromJSON Quote
+makeLenses ''Quote
 
-generateQuote :: IO T.Text
-generateQuote = do
-  quotes <- decodeFileStrict "resources/quotes.json"
-  randomIndex <- randomRIO (3, Prelude.length $ fromJust quotes)
-  return $ text $ fromJust quotes !! randomIndex
+instance FromJSON Quote where
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+
+generateQuote :: IO Quote
+generateQuote =
+  decodeFileStrict "resources/quotes.json"
+    >>= randomElem . fromMaybe (error "could not decode JSON into quote")
+
+randomElem :: [a] -> IO a
+randomElem xs = (xs !!) <$> randomRIO (3, length xs - 1)
