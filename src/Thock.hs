@@ -48,8 +48,8 @@ movePromptCursor g =
 movePromptByN :: Int -> TextZipper T.Text -> TextZipper T.Text
 movePromptByN n tz
   | n < 0 = movePromptByN (n + 1) (moveLeft tz)
-  | n == 0 = tz
   | n > 0 = movePromptByN (n - 1) (moveRight tz)
+  | otherwise = tz
 
 numCorrectCurrentWord :: Game -> Int
 numCorrectCurrentWord g = length $ takeWhile (uncurry (==)) $ T.zip currentWord currentInput
@@ -62,8 +62,8 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
-initializeGame :: Game
-initializeGame =
+initializeGame :: T.Text -> Game
+initializeGame t =
   Game
-    (textZipper ["Placeholder", "prompt", "with", "some", "extra", "text!"] Nothing)
+    (textZipper (T.words t) Nothing)
     (E.editor Thock (Just 1) "")

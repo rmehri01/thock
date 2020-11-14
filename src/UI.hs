@@ -69,8 +69,3 @@ theApp =
       M.appStartEvent = return,
       M.appAttrMap = const theMap
     }
-
-run :: IO ()
-run = do
-  _ <- M.defaultMain theApp initializeGame
-  return ()

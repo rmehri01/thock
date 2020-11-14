@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5967e99179f13f00e2d0e2690785216c7bf68eca3605e1ee16c8db34d0b2642f
+-- hash: 6c668a8925cb845b314e6895f479b6a91150e0c300099890bd577267e9f33955
 
 name:           thock
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Quotes
       Thock
       UI
   other-modules:
@@ -35,10 +36,12 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
     , microlens
     , microlens-th
+    , random
     , text
     , text-zipper
     , vty
@@ -52,10 +55,12 @@ executable thock-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
     , microlens
     , microlens-th
+    , random
     , text
     , text-zipper
     , thock
@@ -71,10 +76,12 @@ test-suite thock-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , brick
     , microlens
     , microlens-th
+    , random
     , text
     , text-zipper
     , thock
