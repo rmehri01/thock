@@ -1,12 +1,12 @@
 module Main where
 
-import UI
-import Thock
-import Quotes
 import qualified Brick.Main as M
+import Quotes
+import Thock
+import UI
 
 main :: IO ()
 main = do
-  quote <- generateQuote
-  _ <- M.defaultMain theApp (initializeGame quote)
+  q <- generateQuote
+  _ <- M.defaultMain theApp (initializeGame q)
   return ()

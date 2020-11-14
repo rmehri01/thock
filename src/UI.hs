@@ -11,9 +11,9 @@ import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.Text as T
-import Data.Text.Zipper
 import qualified Graphics.Vty as V
 import Lens.Micro
+import Quotes
 import Thock
 
 draw :: Game -> [Widget Name]
@@ -35,7 +35,7 @@ drawPrompt g = addBorder "prompt" (C.center textWidget)
     restWidget = txt restText'
     (incorrectText, restText') = T.splitAt (numIncorrectChars g) restText
     (correctText, restText) = T.splitAt (numCorrectChars g) allText
-    allText = T.unwords $ getText $ g ^. prompt
+    allText = g ^. (quote . text)
 
 drawInput :: Game -> Widget Name
 drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. input))

@@ -15,7 +15,8 @@ data Name = Thock deriving (Ord, Show, Eq)
 
 data Game = Game
   { _prompt :: TextZipper T.Text,
-    _input :: E.Editor T.Text Name
+    _input :: E.Editor T.Text Name,
+    _quote :: Quote
   }
 
 makeLenses ''Game
@@ -24,8 +25,7 @@ progress :: Game -> Float
 progress g = ((/) `on` fromIntegral) correct total
   where
     correct = numCorrectChars g
-    total = T.length $ T.unwords $ getText promptCursor
-    promptCursor = g ^. prompt
+    total = g ^. (quote . numChars)
 
 numCorrectChars :: Game -> Int
 numCorrectChars g = correctBefore + col
@@ -66,5 +66,7 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
 initializeGame :: Quote -> Game
 initializeGame q =
   Game
-    (textZipper (T.words (q ^. text)) Nothing)
-    (E.editor Thock (Just 1) "")
+    { _prompt = textZipper (T.words (q ^. text)) Nothing,
+      _input = E.editor Thock (Just 1) "",
+      _quote = q
+    }
