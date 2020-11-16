@@ -63,6 +63,17 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
+lineLengths :: Game -> Int -> [Int]
+lineLengths g lim =
+  let go [] acc = [acc | acc /= 0]
+      go allT@(t : ts) acc
+        | nextAcc < lim = go ts nextAcc
+        | otherwise = acc : go allT 0
+        where
+          nextAcc = T.length t + acc + lenSpace
+          lenSpace = if null ts then 0 else 1
+   in go (T.words $ g ^. (quote . text)) 0
+
 initializeGame :: Quote -> Game
 initializeGame q =
   Game

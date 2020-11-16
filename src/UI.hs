@@ -29,13 +29,20 @@ drawProgressBar g = addBorder "progress" (P.progressBar (Just percentStr) amount
 drawPrompt :: Game -> Widget Name
 drawPrompt g = addBorder "prompt" (C.center textWidget)
   where
-    textWidget = correctWidget <+> incorrectWidget <+> restWidget
-    correctWidget = withAttr "correct" $ txt correctText
-    incorrectWidget = withAttr "incorrect" $ txt incorrectText
-    restWidget = txt restText'
+    textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 50)
+    correctWidgets = withAttr "correct" . txt . T.singleton <$> T.unpack correctText
+    incorrectWidgets = withAttr "incorrect" . txt . T.singleton <$> T.unpack incorrectText
+    restWidgets = txt . T.singleton <$> T.unpack restText'
     (incorrectText, restText') = T.splitAt (numIncorrectChars g) restText
     (correctText, restText) = T.splitAt (numCorrectChars g) allText
     allText = g ^. (quote . text)
+
+drawTextBlock :: [Widget Name] -> [Int] -> Widget Name
+drawTextBlock ws ls
+  | null ws || null ls = emptyWidget
+  | otherwise = foldl1 (<+>) row <=> drawTextBlock rest (tail ls)
+  where
+    (row, rest) = splitAt (head ls) ws
 
 drawInput :: Game -> Widget Name
 drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. input))
