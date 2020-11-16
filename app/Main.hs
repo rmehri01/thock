@@ -1,6 +1,12 @@
 module Main where
 
-import Lib
+import qualified Brick.Main as M
+import Quotes
+import Thock
+import UI
 
 main :: IO ()
-main = someFunc
+main = do
+  q <- generateQuote
+  _ <- M.defaultMain theApp (initializeGame q)
+  return ()

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e010117ceaf765a0637b421703235b47aa97585fac7d464b3ebbde1acae143bc
+-- hash: a11f375275a18d56ef1827e21e5072708ffca4be5ba8f1cd4997feca22361de9
 
 name:           thock
 version:        0.1.0.0
@@ -27,13 +27,23 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Quotes
+      Thock
+      UI
   other-modules:
       Paths_thock
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , brick
+    , microlens
+    , microlens-th
+    , random
+    , text
+    , text-zipper
+    , vty
   default-language: Haskell2010
 
 executable thock-exe
@@ -42,10 +52,18 @@ executable thock-exe
       Paths_thock
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , brick
+    , microlens
+    , microlens-th
+    , random
+    , text
+    , text-zipper
     , thock
+    , vty
   default-language: Haskell2010
 
 test-suite thock-test
@@ -55,8 +73,16 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
+    , brick
+    , microlens
+    , microlens-th
+    , random
+    , text
+    , text-zipper
     , thock
+    , vty
   default-language: Haskell2010
