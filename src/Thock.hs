@@ -11,12 +11,16 @@ import Lens.Micro
 import Lens.Micro.TH
 import Quotes
 
-data Name = Thock deriving (Ord, Show, Eq)
+data State
+  = MainMenu
+  | Practice
+  | Online
 
 data Game = Game
   { _prompt :: TextZipper T.Text,
-    _input :: E.Editor T.Text Name,
-    _quote :: Quote
+    _input :: E.Editor T.Text (),
+    _quote :: Quote,
+    _state :: State
   }
 
 makeLenses ''Game
@@ -78,6 +82,7 @@ initializeGame :: Quote -> Game
 initializeGame q =
   Game
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
-      _input = E.editor Thock (Just 1) "",
-      _quote = q
+      _input = E.editor () (Just 1) "",
+      _quote = q,
+      _state = MainMenu
     }

@@ -16,20 +16,20 @@ import Lens.Micro
 import Quotes
 import Thock
 
-draw :: Game -> [Widget Name]
+draw :: Game -> [Widget ()]
 draw g = [drawProgressBar g <=> drawPrompt g <=> drawInput g]
 
-drawProgressBar :: Game -> Widget Name
+drawProgressBar :: Game -> Widget ()
 drawProgressBar g = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
   where
     percentStr = show percentDone ++ "%"
     percentDone = floor (amountDone * 100) :: Int
     amountDone = progress g
 
-drawPrompt :: Game -> Widget Name
+drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
   where
-    textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 50)
+    textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 50) -- TODO: wrap by context or maybe config?
     correctWidgets = withAttr "correct" . txt . T.singleton <$> T.unpack correctText
     incorrectWidgets = withAttr "incorrect" . txt . T.singleton <$> T.unpack incorrectText
     restWidgets = txt . T.singleton <$> T.unpack restText'
@@ -37,20 +37,20 @@ drawPrompt g = addBorder "prompt" (C.center textWidget)
     (correctText, restText) = T.splitAt (numCorrectChars g) allText
     allText = g ^. (quote . text)
 
-drawTextBlock :: [Widget Name] -> [Int] -> Widget Name
+drawTextBlock :: [Widget ()] -> [Int] -> Widget ()
 drawTextBlock ws ls
   | null ws || null ls = emptyWidget
   | otherwise = foldl1 (<+>) row <=> drawTextBlock rest (tail ls)
   where
     (row, rest) = splitAt (head ls) ws
 
-drawInput :: Game -> Widget Name
+drawInput :: Game -> Widget ()
 drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. input))
 
-addBorder :: T.Text -> Widget Name -> Widget Name
+addBorder :: T.Text -> Widget () -> Widget ()
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
 
-handleKey :: Game -> BrickEvent Name e -> EventM Name (Next Game)
+handleKey :: Game -> BrickEvent () e -> EventM () (Next Game)
 handleKey g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt g
@@ -67,7 +67,7 @@ theMap =
       ("incorrect", bg V.red)
     ]
 
-theApp :: M.App Game e Name
+theApp :: M.App Game e ()
 theApp =
   M.App
     { M.appDraw = draw,
