@@ -28,6 +28,7 @@ dependencies:
 - random
 - text
 - text-zipper
+- vector
 - vty
 
 library:
