@@ -2,28 +2,28 @@
 
 module UI where
 
-import Brick
-import qualified Brick.AttrMap as A
-import qualified Brick.Main as M
-import qualified Brick.Widgets.Border as B
+import           Brick
+import qualified Brick.AttrMap              as A
+import qualified Brick.Main                 as M
+import qualified Brick.Widgets.Border       as B
 import qualified Brick.Widgets.Border.Style as BS
-import qualified Brick.Widgets.Center as C
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
-import qualified Brick.Widgets.ProgressBar as P
-import Control.Monad.IO.Class
-import qualified Data.Text as T
-import Graphics.Vty (rgbColor)
-import qualified Graphics.Vty as V
-import Lens.Micro
-import Quotes
-import Thock
+import qualified Brick.Widgets.Center       as C
+import qualified Brick.Widgets.Edit         as E
+import qualified Brick.Widgets.List         as L
+import qualified Brick.Widgets.ProgressBar  as P
+import           Control.Monad.IO.Class
+import qualified Data.Text                  as T
+import           Graphics.Vty               (rgbColor)
+import qualified Graphics.Vty               as V
+import           Lens.Micro
+import           Quotes
+import           Thock
 
 draw :: GameState -> [Widget ()]
 draw s = case s of
   MainMenu l -> drawMain l
   Practice g -> drawPractice g
-  Online -> drawOnline undefined
+  Online     -> drawOnline undefined
 
 drawMain :: MenuList -> [Widget ()]
 drawMain l = [addBorder "" (titleWidget <=> listWidget)]
@@ -102,13 +102,13 @@ handleKey :: GameState -> BrickEvent () e -> EventM () (Next GameState)
 handleKey gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
   Practice g -> handleKeyPractice g ev
-  Online -> handleKeyOnline undefined ev
+  Online     -> handleKeyOnline undefined ev
 
 handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
-  V.EvKey V.KEsc [] -> M.halt (MainMenu l)
+  V.EvKey V.KEsc []   -> M.halt (MainMenu l)
   V.EvKey V.KEnter [] -> liftIO generateQuote >>= M.continue . startGame l
-  ev -> L.handleListEvent ev l >>= M.continue . MainMenu
+  ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
 handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)

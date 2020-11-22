@@ -1,22 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Thock where
 
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Data.Function
-import qualified Data.Text as T
-import Data.Text.Zipper
-import qualified Data.Vector as Vec
-import Lens.Micro
-import Lens.Micro.TH
-import Quotes
+import           Data.Function
+import qualified Data.Text          as T
+import           Data.Text.Zipper
+import qualified Data.Vector        as Vec
+import           Lens.Micro
+import           Lens.Micro.TH
+import           Quotes
 
 data Game = Game
   { _prompt :: TextZipper T.Text,
-    _input :: E.Editor T.Text (),
-    _quote :: Quote
+    _input  :: E.Editor T.Text (),
+    _quote  :: Quote
   }
 
 makeLenses ''Game
@@ -85,5 +85,5 @@ initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 
 startGame :: MenuList -> Quote -> GameState
 startGame l q = case L.listSelected l of
-  Just i -> if i == 0 then Practice (initializeGame q) else Online
+  Just i  -> if i == 0 then Practice (initializeGame q) else Online
   Nothing -> MainMenu l
