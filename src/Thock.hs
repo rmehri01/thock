@@ -1,25 +1,34 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Thock where
 
 import qualified Brick.Widgets.Edit as E
-import Data.Function
-import qualified Data.Text as T
-import Data.Text.Zipper
-import Lens.Micro
-import Lens.Micro.TH
-import Quotes
-
-data Name = Thock deriving (Ord, Show, Eq)
+import qualified Brick.Widgets.List as L
+import           Data.Function
+import qualified Data.Text          as T
+import           Data.Text.Zipper
+import qualified Data.Vector        as Vec
+import           Lens.Micro
+import           Lens.Micro.TH
+import           Quotes
 
 data Game = Game
   { _prompt :: TextZipper T.Text,
-    _input :: E.Editor T.Text Name,
-    _quote :: Quote
+    _input  :: E.Editor T.Text (),
+    _quote  :: Quote
   }
 
 makeLenses ''Game
+
+type MenuList = L.List () T.Text
+
+data GameState
+  = MainMenu {_list :: MenuList}
+  | Practice {_game :: Game}
+  | Online
+
+makeLenses ''GameState
 
 progress :: Game -> Float
 progress g = ((/) `on` fromIntegral) correct total
@@ -63,21 +72,18 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
-lineLengths :: Game -> Int -> [Int]
-lineLengths g lim =
-  let go [] acc = [acc | acc /= 0]
-      go allT@(t : ts) acc
-        | nextAcc < lim = go ts nextAcc
-        | otherwise = acc : go allT 0
-        where
-          nextAcc = T.length t + acc + lenSpace
-          lenSpace = if null ts then 0 else 1
-   in go (T.words $ g ^. (quote . text)) 0
-
 initializeGame :: Quote -> Game
 initializeGame q =
   Game
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
-      _input = E.editor Thock (Just 1) "",
+      _input = E.editor () (Just 1) "",
       _quote = q
     }
+
+initialState :: GameState
+initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
+
+startGame :: MenuList -> Quote -> GameState
+startGame l q = case L.listSelected l of
+  Just i  -> if i == 0 then Practice (initializeGame q) else Online
+  Nothing -> MainMenu l

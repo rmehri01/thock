@@ -1,18 +1,18 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Quotes where
 
-import Data.Aeson
-import Data.Maybe
-import qualified Data.Text as T
-import GHC.Generics
-import Lens.Micro.TH
-import System.Random
+import           Data.Aeson
+import           Data.Maybe
+import qualified Data.Text     as T
+import           GHC.Generics
+import           Lens.Micro.TH
+import           System.Random
 
 data Quote = Quote
-  { _text :: T.Text,
-    _source :: T.Text,
+  { _text     :: T.Text,
+    _source   :: T.Text,
     _numChars :: Int
   }
   deriving (Show, Generic)
