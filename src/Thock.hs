@@ -85,5 +85,5 @@ initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 
 startGame :: MenuList -> Quote -> GameState
 startGame l q = case L.listSelected l of
-  Just i -> (if i == 0 then Practice (initializeGame q) else Online)
+  Just i -> if i == 0 then Practice (initializeGame q) else Online
   Nothing -> MainMenu l

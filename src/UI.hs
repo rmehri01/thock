@@ -13,6 +13,7 @@ import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
 import Control.Monad.IO.Class
 import qualified Data.Text as T
+import Graphics.Vty (rgbColor)
 import qualified Graphics.Vty as V
 import Lens.Micro
 import Quotes
@@ -25,7 +26,21 @@ draw s = case s of
   Online -> drawOnline undefined
 
 drawMain :: MenuList -> [Widget ()]
-drawMain l = [addBorder "" (txt "thock" <=> L.renderList listDrawElement True l)] -- TODO: make it look better
+drawMain l = [addBorder "" (titleWidget <=> listWidget)]
+  where
+    listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
+
+
+titleWidget :: Widget ()
+titleWidget =
+  C.center $
+    withAttr "title" $
+            txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
+        <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
+        <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
+        <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
+        <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
+        <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
 
 listDrawElement :: Bool -> T.Text -> Widget ()
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
@@ -111,11 +126,12 @@ theMap =
   A.attrMap
     V.defAttr
     [ (L.listAttr, fg V.white),
-      (L.listSelectedAttr, fg V.green `V.withStyle` V.bold),
+      (L.listSelectedAttr, fg (rgbColor 255 255 186) `V.withStyle` V.bold),
       (P.progressCompleteAttr, V.black `on` V.white),
       (P.progressIncompleteAttr, V.white `on` V.black),
       ("correct", fg V.green),
-      ("incorrect", bg V.red)
+      ("incorrect", bg V.red),
+      ("title", fg (rgbColor 186 255 201))
     ]
 
 theApp :: M.App GameState e ()
