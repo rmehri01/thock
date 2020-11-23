@@ -8,15 +8,18 @@ import qualified Brick.Widgets.List as L
 import           Data.Function
 import qualified Data.Text          as T
 import           Data.Text.Zipper
+import           Data.Time
 import qualified Data.Vector        as Vec
 import           Lens.Micro
 import           Lens.Micro.TH
 import           Quotes
 
 data Game = Game
-  { _prompt :: TextZipper T.Text,
-    _input  :: E.Editor T.Text (),
-    _quote  :: Quote
+  { _prompt      :: TextZipper T.Text,
+    _input       :: E.Editor T.Text (),
+    _quote       :: Quote,
+    _start       :: UTCTime,
+    _lastUpdated :: UTCTime
   }
 
 makeLenses ''Game
@@ -39,7 +42,7 @@ progress g = ((/) `on` fromIntegral) correct total
 numCorrectChars :: Game -> Int
 numCorrectChars g = correctBefore + col
   where
-    correctBefore = T.length $ foldMap (`T.snoc` ' ') $ take row $ getText tz
+    correctBefore = T.length . foldMap (`T.snoc` ' ') . take row $ getText tz
     (row, col) = cursorPosition tz
     tz = g ^. prompt
 
@@ -62,7 +65,7 @@ movePromptByN n tz
   | otherwise = tz
 
 numCorrectCurrentWord :: Game -> Int
-numCorrectCurrentWord g = length $ takeWhile (uncurry (==)) $ T.zip currentWord currentInput
+numCorrectCurrentWord g = length . takeWhile (uncurry (==)) $ T.zip currentWord currentInput
   where
     currentWord = currentLine (g ^. prompt)
     currentInput = head $ E.getEditContents (g ^. input)
@@ -72,18 +75,31 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
-initializeGame :: Quote -> Game
-initializeGame q =
+updateTime :: UTCTime -> Game -> Game
+updateTime t g = g & lastUpdated .~ t
+
+wpm :: Game -> Double
+wpm g = if secondsElapsed g == 0 then 0 else cps * (60 / 5)
+  where
+    cps = fromIntegral (numCorrectChars g) / secondsElapsed g
+
+secondsElapsed :: Game -> Double
+secondsElapsed g = realToFrac $ diffUTCTime (g ^. lastUpdated) (g ^. start)
+
+initializeGame :: Quote -> UTCTime -> Game
+initializeGame q t =
   Game
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
       _input = E.editor () (Just 1) "",
-      _quote = q
+      _quote = q,
+      _start = t,
+      _lastUpdated = t
     }
 
 initialState :: GameState
 initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 
-startGame :: MenuList -> Quote -> GameState
-startGame l q = case L.listSelected l of
-  Just i  -> if i == 0 then Practice (initializeGame q) else Online
+startGame :: MenuList -> Quote -> UTCTime -> GameState
+startGame l q t = case L.listSelected l of
+  Just i  -> if i == 0 then Practice (initializeGame q t) else Online
   Nothing -> MainMenu l

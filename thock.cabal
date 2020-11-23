@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 755902e861999944e16130187df6aee34c2864511476cb595f0d80bc2fd4fff7
+-- hash: bc6667a1b6cff3923c727130a5bceaeb8de406e9b48a719e8fe20a7a124026c3
 
 name:           thock
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
     , random
     , text
     , text-zipper
+    , time
     , vector
     , vty
   default-language: Haskell2010
@@ -64,6 +65,7 @@ executable thock-exe
     , text
     , text-zipper
     , thock
+    , time
     , vector
     , vty
   default-language: Haskell2010
@@ -86,6 +88,7 @@ test-suite thock-test
     , text
     , text-zipper
     , thock
+    , time
     , vector
     , vty
   default-language: Haskell2010

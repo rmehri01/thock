@@ -13,6 +13,7 @@ import qualified Brick.Widgets.List         as L
 import qualified Brick.Widgets.ProgressBar  as P
 import           Control.Monad.IO.Class
 import qualified Data.Text                  as T
+import           Data.Time
 import           Graphics.Vty               (rgbColor)
 import qualified Graphics.Vty               as V
 import           Lens.Micro
@@ -33,7 +34,7 @@ drawMain l = [addBorder "" (titleWidget <=> listWidget)]
 
 titleWidget :: Widget ()
 titleWidget =
-  C.center $
+  C.center .
     withAttr "title" $
             txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
         <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
@@ -57,11 +58,13 @@ drawOnline :: Game -> [Widget ()]
 drawOnline = undefined
 
 drawProgressBar :: Game -> Widget ()
-drawProgressBar g = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
+drawProgressBar g = progressWidget <+> wpmWidget
   where
+    progressWidget = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
     percentStr = show percentDone ++ "%"
     percentDone = floor (amountDone * 100) :: Int
     amountDone = progress g
+    wpmWidget = addBorder "" . str . (++ " WPM") . show . (floor :: Double -> Int) $ wpm g
 
 drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
@@ -107,7 +110,10 @@ handleKey gs ev = case gs of
 handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
   V.EvKey V.KEsc []   -> M.halt (MainMenu l)
-  V.EvKey V.KEnter [] -> liftIO generateQuote >>= M.continue . startGame l
+  V.EvKey V.KEnter [] -> do
+    q <- liftIO generateQuote
+    t <- liftIO getCurrentTime
+    M.continue $ startGame l q t
   ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
@@ -115,7 +121,10 @@ handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyPractice g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (Practice g) -- TODO: separate end screen
-    _ -> handleEventLensed g input E.handleEditorEvent ev >>= M.continue . Practice . movePromptCursor
+    _ -> do
+      g' <- handleEventLensed g input E.handleEditorEvent ev
+      currentTime <- liftIO getCurrentTime
+      M.continue . Practice . updateTime currentTime $ movePromptCursor g'
 handleKeyPractice st _ = M.continue (Practice st)
 
 handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)
@@ -126,12 +135,12 @@ theMap =
   A.attrMap
     V.defAttr
     [ (L.listAttr, fg V.white),
-      (L.listSelectedAttr, fg (rgbColor 255 255 186) `V.withStyle` V.bold),
+      (L.listSelectedAttr, fg (rgbColor 255 255 (186 :: Int)) `V.withStyle` V.bold),
       (P.progressCompleteAttr, V.black `on` V.white),
       (P.progressIncompleteAttr, V.white `on` V.black),
       ("correct", fg V.green),
       ("incorrect", bg V.red),
-      ("title", fg (rgbColor 186 255 201))
+      ("title", fg (rgbColor 186 255 (201 :: Int)))
     ]
 
 theApp :: M.App GameState e ()
