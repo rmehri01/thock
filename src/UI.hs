@@ -31,17 +31,16 @@ drawMain l = [addBorder "" (titleWidget <=> listWidget)]
   where
     listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
 
-
 titleWidget :: Widget ()
 titleWidget =
-  C.center .
-    withAttr "title" $
-            txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
-        <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
-        <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
-        <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
-        <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
-        <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
+  C.center
+    . withAttr "title"
+        $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
+      <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
+      <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
+      <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
+      <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
+      <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
 
 listDrawElement :: Bool -> T.Text -> Widget ()
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
@@ -52,7 +51,17 @@ listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
         else "  "
 
 drawPractice :: Game -> [Widget ()]
-drawPractice g = [drawProgressBar g <=> drawPrompt g <=> drawInput g]
+drawPractice g = [drawFinished g, drawProgressBar g <=> drawPrompt g <=> drawInput g]
+
+drawFinished :: Game -> Widget ()
+drawFinished g = if isDone g then doneWidget else emptyWidget
+  where
+    doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
+    stats = speedStat <=> timeStat <=> sourceStat
+    speedStat = txt "Speed: " <+> withAttr "title" (drawWpm g) -- TODO: primary and secondary attrs
+    timeStat = txt "Time elapsed: " <+> withAttr "title" (str . (++ " seconds") . show . (floor :: Double -> Int) $ secondsElapsed g)
+    sourceStat = txt "Quote source: " <+> withAttr "title" (txt $ g ^. (quote . source))
+    instructions =  C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
 drawOnline :: Game -> [Widget ()]
 drawOnline = undefined
@@ -64,7 +73,10 @@ drawProgressBar g = progressWidget <+> wpmWidget
     percentStr = show percentDone ++ "%"
     percentDone = floor (amountDone * 100) :: Int
     amountDone = progress g
-    wpmWidget = addBorder "" . str . (++ " WPM") . show . (floor :: Double -> Int) $ wpm g
+    wpmWidget = addBorder "" (drawWpm g)
+
+drawWpm :: Game -> Widget ()
+drawWpm = str . (++ " WPM") . show . (floor :: Double -> Int) . wpm
 
 drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
@@ -109,23 +121,34 @@ handleKey gs ev = case gs of
 
 handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
-  V.EvKey V.KEsc []   -> M.halt (MainMenu l)
+  V.EvKey V.KEsc [] -> M.halt (MainMenu l)
   V.EvKey V.KEnter [] -> do
     q <- liftIO generateQuote
     t <- liftIO getCurrentTime
     M.continue $ startGame l q t
-  ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
+  ev -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
 handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyPractice g (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt (Practice g) -- TODO: separate end screen
-    _ -> do
-      g' <- handleEventLensed g input E.handleEditorEvent ev
-      currentTime <- liftIO getCurrentTime
-      M.continue . Practice . updateTime currentTime $ movePromptCursor g'
-handleKeyPractice st _ = M.continue (Practice st)
+    V.EvKey V.KEsc [] -> M.halt (Practice g)
+    V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
+    V.EvKey (V.KChar 'r') [V.MCtrl] -> do
+      t <- liftIO getCurrentTime
+      M.continue (Practice (initializeGame (g ^. quote) t))
+    V.EvKey (V.KChar 'n') [V.MCtrl] -> do
+      q <- liftIO generateQuote
+      t <- liftIO getCurrentTime
+      M.continue (Practice (initializeGame q t)) -- TODO: duplicated
+    _ ->
+      if isDone g
+        then M.continue (Practice g)
+        else do
+          g' <- handleEventLensed g input E.handleEditorEvent ev
+          currentTime <- liftIO getCurrentTime
+          M.continue . Practice . updateTime currentTime $ movePromptCursor g'
+handleKeyPractice g _ = M.continue (Practice g)
 
 handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyOnline = undefined

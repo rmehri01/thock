@@ -86,6 +86,9 @@ wpm g = if secondsElapsed g == 0 then 0 else cps * (60 / 5)
 secondsElapsed :: Game -> Double
 secondsElapsed g = realToFrac $ diffUTCTime (g ^. lastUpdated) (g ^. start)
 
+isDone :: Game -> Bool
+isDone g = numCorrectChars g == g ^. (quote . numChars)
+
 initializeGame :: Quote -> UTCTime -> Game
 initializeGame q t =
   Game
