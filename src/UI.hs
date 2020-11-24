@@ -10,10 +10,10 @@ import qualified Brick.Widgets.Center       as C
 import qualified Brick.Widgets.Edit         as E
 import qualified Brick.Widgets.List         as L
 import qualified Brick.Widgets.ProgressBar  as P
+import           Control.Applicative
 import           Control.Monad.IO.Class
 import qualified Data.Text                  as T
 import           Data.Time
-import           GHC.Base
 import qualified Graphics.Vty               as V
 import           Lens.Micro
 import           Quotes
@@ -140,7 +140,7 @@ handleKeyPractice g (VtyEvent ev) =
     V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
     V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
     V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
-    V.EvKey (V.KChar _) [] -> nextState (g & strokes %~ (+ 1))
+    V.EvKey (V.KChar _) [] -> nextState (g & strokes +~ 1)
     _ -> nextState g
   where
     nextState g' =
@@ -158,7 +158,7 @@ handleKeyOnline = undefined
 startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState)
 startGameM mq gs = liftIO generatedGameState >>= M.continue
   where
-    generatedGameState = liftA3 startGame (maybe generateQuote pure mq) getCurrentTime (pure gs)
+    generatedGameState = liftA2 startGame (maybe generateQuote pure mq) (pure gs)
 
 theApp :: M.App GameState e ()
 theApp =

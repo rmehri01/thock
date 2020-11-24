@@ -3,13 +3,14 @@
 
 module Thock where
 
-import qualified Brick.Widgets.Edit as E
-import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.Edit  as E
+import qualified Brick.Widgets.List  as L
+import           Control.Applicative
 import           Data.Function
-import qualified Data.Text          as T
+import qualified Data.Text           as T
 import           Data.Text.Zipper
 import           Data.Time
-import qualified Data.Vector        as Vec
+import qualified Data.Vector         as Vec
 import           Lens.Micro
 import           Lens.Micro.TH
 import           Quotes
@@ -18,8 +19,8 @@ data Game = Game
   { _prompt      :: TextZipper T.Text,
     _input       :: E.Editor T.Text (),
     _quote       :: Quote,
-    _start       :: UTCTime,
-    _lastUpdated :: UTCTime,
+    _start       :: Maybe UTCTime,
+    _lastUpdated :: Maybe UTCTime,
     _strokes     :: Int
   }
 
@@ -77,46 +78,51 @@ numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
     currentInput = head $ E.getEditContents (g ^. input)
 
 updateTime :: UTCTime -> Game -> Game
-updateTime t g = g & lastUpdated .~ t
+updateTime t g = g' & lastUpdated ?~ t
+  where
+    g' = case g ^. start of
+      Nothing -> g & start ?~ t
+      _       -> g
 
 wpm :: Game -> Double
-wpm g = if secondsElapsed g == 0 then 0 else cps * (60 / 5)
+wpm g =  if s == 0 then 0 else cps * (60 / 5)
   where
-    cps = fromIntegral (numCorrectChars g) / secondsElapsed g
+    cps = fromIntegral (numCorrectChars g) / s
+    s = secondsElapsed g
 
 accuracy :: Game -> Double
 accuracy g = ((/) `on` fromIntegral) (g ^. (quote . numChars)) (g ^. strokes)
 
 secondsElapsed :: Game -> Double
-secondsElapsed g = realToFrac $ diffUTCTime (g ^. lastUpdated) (g ^. start)
+secondsElapsed g = maybe 0 realToFrac (liftA2 diffUTCTime (g ^. lastUpdated) (g ^. start))
 
 isDone :: Game -> Bool
 isDone g = numCorrectChars g == g ^. (quote . numChars)
 
-initializeGame :: Quote -> UTCTime -> Game
-initializeGame q t =
+initializeGame :: Quote -> Game
+initializeGame q =
   Game
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
       _input = E.editor () (Just 1) "",
       _quote = q,
-      _start = t,
-      _lastUpdated = t,
+      _start = Nothing,
+      _lastUpdated = Nothing,
       _strokes = 0
     }
 
 initialState :: GameState
 initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 
-startGame :: Quote -> UTCTime -> GameState -> GameState
-startGame q t gs = case gs of
-  MainMenu l -> startGameMainMenu l q t
-  Practice _ -> nextPracticeGame q t
+startGame :: Quote -> GameState -> GameState
+startGame q gs = case gs of
+  MainMenu l -> startGameMainMenu l q
+  Practice _ -> nextPracticeGame q
   Online     -> undefined
 
-startGameMainMenu :: MenuList -> Quote -> UTCTime -> GameState
-startGameMainMenu l q t = case L.listSelected l of
-  Just i  -> if i == 0 then Practice (initializeGame q t) else Online
+startGameMainMenu :: MenuList -> Quote -> GameState
+startGameMainMenu l q = case L.listSelected l of
+  Just i  -> if i == 0 then Practice (initializeGame q) else Online
   Nothing -> MainMenu l
 
-nextPracticeGame :: Quote -> UTCTime -> GameState
-nextPracticeGame q t = Practice (initializeGame q t)
+nextPracticeGame :: Quote -> GameState
+nextPracticeGame q = Practice (initializeGame q)
