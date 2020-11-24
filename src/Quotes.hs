@@ -4,8 +4,9 @@
 module Quotes where
 
 import           Data.Aeson
+import           Data.FileEmbed
 import           Data.Maybe
-import qualified Data.Text     as T
+import qualified Data.Text      as T
 import           GHC.Generics
 import           Lens.Micro.TH
 import           System.Random
@@ -23,9 +24,10 @@ instance FromJSON Quote where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
 
 generateQuote :: IO Quote
-generateQuote =
-  decodeFileStrict "resources/quotes.json"
-    >>= randomElem . fromMaybe (error "could not decode JSON into quote")
+generateQuote = randomElem qs
+   where
+     qs = fromMaybe (error "could not decode JSON into quote") mqs
+     mqs = decodeStrict $(embedFile "resources/quotes.json")
 
 randomElem :: [a] -> IO a
-randomElem xs = (xs !!) <$> randomRIO (3, length xs - 1)
+randomElem xs = (xs !!) <$> randomRIO (0, length xs - 1)

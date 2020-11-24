@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1db0e3f193f2e3debc91292d3394080ae8042e339ca875562af030e9c74cab09
+-- hash: 3f5b8a67ba14abd0f5323106c73b30496f4b9a17f5d9d552d7315c736bd64936
 
 name:           thock
 version:        0.1.0.0
@@ -39,6 +39,7 @@ library
       aeson
     , base >=4.7 && <5
     , brick
+    , file-embed
     , microlens
     , microlens-th
     , random
@@ -60,6 +61,7 @@ executable thock-exe
       aeson
     , base >=4.7 && <5
     , brick
+    , file-embed
     , microlens
     , microlens-th
     , random
@@ -83,6 +85,7 @@ test-suite thock-test
       aeson
     , base >=4.7 && <5
     , brick
+    , file-embed
     , microlens
     , microlens-th
     , random

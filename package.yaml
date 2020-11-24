@@ -23,6 +23,7 @@ dependencies:
 - aeson
 - base >= 4.7 && < 5
 - brick
+- file-embed
 - microlens
 - microlens-th
 - random
