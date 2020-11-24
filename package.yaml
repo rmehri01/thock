@@ -26,12 +26,15 @@ dependencies:
 - file-embed
 - microlens
 - microlens-th
+- mtl
+- network
 - random
 - text
 - text-zipper
 - time
 - vector
 - vty
+- websockets
 
 library:
   source-dirs: src
