@@ -17,6 +17,7 @@ import           GHC.Base
 import qualified Graphics.Vty               as V
 import           Lens.Micro
 import           Quotes
+import           Text.Printf
 import           Thock
 import           UI.Attributes
 
@@ -59,8 +60,8 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
     doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
     stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
     speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm g)
-    accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (str . (++ "%") . show . (floor :: Double -> Int) . (* 100) $ accuracy g) -- TODO: dupe
-    timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (str . (++ " seconds") . show . (floor :: Double -> Int) $ secondsElapsed g)
+    accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 "%" (accuracy g * 100))
+    timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
     sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
     instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
@@ -71,13 +72,18 @@ drawProgressBar :: Game -> Widget ()
 drawProgressBar g = progressWidget <+> wpmWidget
   where
     progressWidget = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
-    percentStr = show percentDone ++ "%"
-    percentDone = floor (amountDone * 100) :: Int
+    percentStr = roundToStr 1 (amountDone * 100) ++ "%"
     amountDone = progress g
     wpmWidget = addBorder "" (drawWpm g)
 
 drawWpm :: Game -> Widget ()
-drawWpm = str . (++ " WPM") . show . (floor :: Double -> Int) . wpm
+drawWpm = drawFloatWithSuffix 0 " WPM" . wpm
+
+drawFloatWithSuffix :: (PrintfArg a, Floating a) => Int -> String -> a -> Widget ()
+drawFloatWithSuffix n s = str . (++ s) . roundToStr n
+
+roundToStr :: (PrintfArg a, Floating a) => Int -> a -> String
+roundToStr = printf "%0.*f"
 
 drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
