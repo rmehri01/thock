@@ -3,7 +3,6 @@
 module UI where
 
 import           Brick
-import qualified Brick.AttrMap              as A
 import qualified Brick.Main                 as M
 import qualified Brick.Widgets.Border       as B
 import qualified Brick.Widgets.Border.Style as BS
@@ -13,11 +12,14 @@ import qualified Brick.Widgets.List         as L
 import qualified Brick.Widgets.ProgressBar  as P
 import           Control.Monad.IO.Class
 import qualified Data.Text                  as T
-import           Graphics.Vty               (rgbColor)
+import           Data.Time
+import           GHC.Base
 import qualified Graphics.Vty               as V
 import           Lens.Micro
 import           Quotes
+import           Text.Printf
 import           Thock
+import           UI.Attributes
 
 draw :: GameState -> [Widget ()]
 draw s = case s of
@@ -30,17 +32,16 @@ drawMain l = [addBorder "" (titleWidget <=> listWidget)]
   where
     listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
 
-
 titleWidget :: Widget ()
 titleWidget =
-  C.center $
-    withAttr "title" $
-            txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
-        <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
-        <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
-        <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
-        <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
-        <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
+  C.center
+    . withAttr titleAttr
+        $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
+      <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
+      <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
+      <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
+      <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
+      <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
 
 listDrawElement :: Bool -> T.Text -> Widget ()
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
@@ -51,24 +52,45 @@ listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
         else "  "
 
 drawPractice :: Game -> [Widget ()]
-drawPractice g = [drawProgressBar g <=> drawPrompt g <=> drawInput g]
+drawPractice g = [drawFinished g, drawProgressBar g <=> drawPrompt g <=> drawInput g]
+
+drawFinished :: Game -> Widget ()
+drawFinished g = if isDone g then doneWidget else emptyWidget
+  where
+    doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
+    stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
+    speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm g)
+    accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 "%" (accuracy g * 100))
+    timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
+    sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
+    instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
 drawOnline :: Game -> [Widget ()]
 drawOnline = undefined
 
 drawProgressBar :: Game -> Widget ()
-drawProgressBar g = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
+drawProgressBar g = progressWidget <+> wpmWidget
   where
-    percentStr = show percentDone ++ "%"
-    percentDone = floor (amountDone * 100) :: Int
+    progressWidget = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
+    percentStr = roundToStr 1 (amountDone * 100) ++ "%"
     amountDone = progress g
+    wpmWidget = addBorder "" (drawWpm g)
+
+drawWpm :: Game -> Widget ()
+drawWpm = drawFloatWithSuffix 0 " WPM" . wpm
+
+drawFloatWithSuffix :: (PrintfArg a, Floating a) => Int -> String -> a -> Widget ()
+drawFloatWithSuffix n s = str . (++ s) . roundToStr n
+
+roundToStr :: (PrintfArg a, Floating a) => Int -> a -> String
+roundToStr = printf "%0.*f"
 
 drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
   where
     textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 65) -- TODO: wrap by context or maybe config?
-    correctWidgets = withAttr "correct" . txt . T.singleton <$> T.unpack correctText
-    incorrectWidgets = withAttr "incorrect" . txt . T.singleton <$> T.unpack incorrectText
+    correctWidgets = withAttr correctAttr . txt . T.singleton <$> T.unpack correctText
+    incorrectWidgets = withAttr incorrectAttr . txt . T.singleton <$> T.unpack incorrectText
     restWidgets = txt . T.singleton <$> T.unpack restText'
     (incorrectText, restText') = T.splitAt (numIncorrectChars g) restText
     (correctText, restText) = T.splitAt (numCorrectChars g) allText
@@ -107,32 +129,36 @@ handleKey gs ev = case gs of
 handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
   V.EvKey V.KEsc []   -> M.halt (MainMenu l)
-  V.EvKey V.KEnter [] -> liftIO generateQuote >>= M.continue . startGame l
+  V.EvKey V.KEnter [] -> startGameM Nothing (MainMenu l)
   ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
 handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyPractice g (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt (Practice g) -- TODO: separate end screen
-    _ -> handleEventLensed g input E.handleEditorEvent ev >>= M.continue . Practice . movePromptCursor
-handleKeyPractice st _ = M.continue (Practice st)
+    V.EvKey V.KEsc [] -> M.halt (Practice g)
+    V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
+    V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
+    V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
+    V.EvKey (V.KChar _) [] -> nextState (g & strokes %~ (+ 1))
+    _ -> nextState g
+  where
+    nextState g' =
+      if isDone g'
+        then M.continue (Practice g')
+        else do
+          gEdited <- handleEventLensed g' input E.handleEditorEvent ev
+          currentTime <- liftIO getCurrentTime
+          M.continue . Practice . updateTime currentTime $ movePromptCursor gEdited
+handleKeyPractice g _ = M.continue (Practice g)
 
 handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyOnline = undefined
 
-theMap :: A.AttrMap
-theMap =
-  A.attrMap
-    V.defAttr
-    [ (L.listAttr, fg V.white),
-      (L.listSelectedAttr, fg (rgbColor 255 255 186) `V.withStyle` V.bold),
-      (P.progressCompleteAttr, V.black `on` V.white),
-      (P.progressIncompleteAttr, V.white `on` V.black),
-      ("correct", fg V.green),
-      ("incorrect", bg V.red),
-      ("title", fg (rgbColor 186 255 201))
-    ]
+startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState)
+startGameM mq gs = liftIO generatedGameState >>= M.continue
+  where
+    generatedGameState = liftA3 startGame (maybe generateQuote pure mq) getCurrentTime (pure gs)
 
 theApp :: M.App GameState e ()
 theApp =
