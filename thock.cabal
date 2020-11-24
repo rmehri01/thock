@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bc6667a1b6cff3923c727130a5bceaeb8de406e9b48a719e8fe20a7a124026c3
+-- hash: 1db0e3f193f2e3debc91292d3394080ae8042e339ca875562af030e9c74cab09
 
 name:           thock
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       Quotes
       Thock
       UI
+      UI.Attributes
   other-modules:
       Paths_thock
   hs-source-dirs:

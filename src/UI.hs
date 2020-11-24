@@ -3,7 +3,6 @@
 module UI where
 
 import           Brick
-import qualified Brick.AttrMap              as A
 import qualified Brick.Main                 as M
 import qualified Brick.Widgets.Border       as B
 import qualified Brick.Widgets.Border.Style as BS
@@ -14,11 +13,12 @@ import qualified Brick.Widgets.ProgressBar  as P
 import           Control.Monad.IO.Class
 import qualified Data.Text                  as T
 import           Data.Time
-import           Graphics.Vty               (rgbColor)
+import           GHC.Base
 import qualified Graphics.Vty               as V
 import           Lens.Micro
 import           Quotes
 import           Thock
+import           UI.Attributes
 
 draw :: GameState -> [Widget ()]
 draw s = case s of
@@ -34,7 +34,7 @@ drawMain l = [addBorder "" (titleWidget <=> listWidget)]
 titleWidget :: Widget ()
 titleWidget =
   C.center
-    . withAttr "title"
+    . withAttr titleAttr
         $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
       <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
       <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
@@ -58,9 +58,9 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
   where
     doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
     stats = speedStat <=> timeStat <=> sourceStat
-    speedStat = txt "Speed: " <+> withAttr "title" (drawWpm g) -- TODO: primary and secondary attrs
-    timeStat = txt "Time elapsed: " <+> withAttr "title" (str . (++ " seconds") . show . (floor :: Double -> Int) $ secondsElapsed g)
-    sourceStat = txt "Quote source: " <+> withAttr "title" (txt $ g ^. (quote . source))
+    speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm g)
+    timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (str . (++ " seconds") . show . (floor :: Double -> Int) $ secondsElapsed g)
+    sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
     instructions =  C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
 drawOnline :: Game -> [Widget ()]
@@ -82,8 +82,8 @@ drawPrompt :: Game -> Widget ()
 drawPrompt g = addBorder "prompt" (C.center textWidget)
   where
     textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 65) -- TODO: wrap by context or maybe config?
-    correctWidgets = withAttr "correct" . txt . T.singleton <$> T.unpack correctText
-    incorrectWidgets = withAttr "incorrect" . txt . T.singleton <$> T.unpack incorrectText
+    correctWidgets = withAttr correctAttr . txt . T.singleton <$> T.unpack correctText
+    incorrectWidgets = withAttr incorrectAttr . txt . T.singleton <$> T.unpack incorrectText
     restWidgets = txt . T.singleton <$> T.unpack restText'
     (incorrectText, restText') = T.splitAt (numIncorrectChars g) restText
     (correctText, restText) = T.splitAt (numCorrectChars g) allText
@@ -121,12 +121,9 @@ handleKey gs ev = case gs of
 
 handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
-  V.EvKey V.KEsc [] -> M.halt (MainMenu l)
-  V.EvKey V.KEnter [] -> do
-    q <- liftIO generateQuote
-    t <- liftIO getCurrentTime
-    M.continue $ startGame l q t
-  ev -> L.handleListEvent ev l >>= M.continue . MainMenu
+  V.EvKey V.KEsc []   -> M.halt (MainMenu l)
+  V.EvKey V.KEnter [] -> startGameM Nothing (MainMenu l)
+  ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
 handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
@@ -134,13 +131,8 @@ handleKeyPractice g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (Practice g)
     V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
-    V.EvKey (V.KChar 'r') [V.MCtrl] -> do
-      t <- liftIO getCurrentTime
-      M.continue (Practice (initializeGame (g ^. quote) t))
-    V.EvKey (V.KChar 'n') [V.MCtrl] -> do
-      q <- liftIO generateQuote
-      t <- liftIO getCurrentTime
-      M.continue (Practice (initializeGame q t)) -- TODO: duplicated
+    V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
+    V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
     _ ->
       if isDone g
         then M.continue (Practice g)
@@ -153,18 +145,10 @@ handleKeyPractice g _ = M.continue (Practice g)
 handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)
 handleKeyOnline = undefined
 
-theMap :: A.AttrMap
-theMap =
-  A.attrMap
-    V.defAttr
-    [ (L.listAttr, fg V.white),
-      (L.listSelectedAttr, fg (rgbColor 255 255 (186 :: Int)) `V.withStyle` V.bold),
-      (P.progressCompleteAttr, V.black `on` V.white),
-      (P.progressIncompleteAttr, V.white `on` V.black),
-      ("correct", fg V.green),
-      ("incorrect", bg V.red),
-      ("title", fg (rgbColor 186 255 (201 :: Int)))
-    ]
+startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState)
+startGameM mq gs = liftIO generatedGameState >>= M.continue
+  where
+    generatedGameState = liftA3 startGame (maybe generateQuote pure mq) getCurrentTime (pure gs)
 
 theApp :: M.App GameState e ()
 theApp =

@@ -102,7 +102,16 @@ initializeGame q t =
 initialState :: GameState
 initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 
-startGame :: MenuList -> Quote -> UTCTime -> GameState
-startGame l q t = case L.listSelected l of
+startGame :: Quote -> UTCTime -> GameState -> GameState
+startGame q t gs = case gs of
+  MainMenu l -> startGameMainMenu l q t
+  Practice _ -> nextPracticeGame q t
+  Online     -> undefined
+
+startGameMainMenu :: MenuList -> Quote -> UTCTime -> GameState
+startGameMainMenu l q t = case L.listSelected l of
   Just i  -> if i == 0 then Practice (initializeGame q t) else Online
   Nothing -> MainMenu l
+
+nextPracticeGame :: Quote -> UTCTime -> GameState
+nextPracticeGame q t = Practice (initializeGame q t)
