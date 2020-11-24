@@ -57,11 +57,12 @@ drawFinished :: Game -> Widget ()
 drawFinished g = if isDone g then doneWidget else emptyWidget
   where
     doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
-    stats = speedStat <=> timeStat <=> sourceStat
+    stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
     speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm g)
+    accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (str . (++ "%") . show . (floor :: Double -> Int) . (* 100) $ accuracy g) -- TODO: dupe
     timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (str . (++ " seconds") . show . (floor :: Double -> Int) $ secondsElapsed g)
     sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
-    instructions =  C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
+    instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
 drawOnline :: Game -> [Widget ()]
 drawOnline = undefined
@@ -133,13 +134,16 @@ handleKeyPractice g (VtyEvent ev) =
     V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
     V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
     V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
-    _ ->
-      if isDone g
-        then M.continue (Practice g)
+    V.EvKey (V.KChar _) [] -> nextState (g & strokes %~ (+ 1))
+    _ -> nextState g
+  where
+    nextState g' =
+      if isDone g'
+        then M.continue (Practice g')
         else do
-          g' <- handleEventLensed g input E.handleEditorEvent ev
+          gEdited <- handleEventLensed g' input E.handleEditorEvent ev
           currentTime <- liftIO getCurrentTime
-          M.continue . Practice . updateTime currentTime $ movePromptCursor g'
+          M.continue . Practice . updateTime currentTime $ movePromptCursor gEdited
 handleKeyPractice g _ = M.continue (Practice g)
 
 handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)

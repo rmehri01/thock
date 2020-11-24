@@ -25,9 +25,9 @@ instance FromJSON Quote where
 
 generateQuote :: IO Quote
 generateQuote = randomElem qs
-   where
-     qs = fromMaybe (error "could not decode JSON into quote") mqs
-     mqs = decodeStrict $(embedFile "resources/quotes.json")
+  where
+    qs = fromMaybe (error "could not decode JSON into quote") mqs
+    mqs = decodeStrict $(embedFile "resources/quotes.json")
 
 randomElem :: [a] -> IO a
 randomElem xs = (xs !!) <$> randomRIO (0, length xs - 1)

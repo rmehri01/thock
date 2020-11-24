@@ -19,7 +19,8 @@ data Game = Game
     _input       :: E.Editor T.Text (),
     _quote       :: Quote,
     _start       :: UTCTime,
-    _lastUpdated :: UTCTime
+    _lastUpdated :: UTCTime,
+    _strokes     :: Int
   }
 
 makeLenses ''Game
@@ -83,6 +84,9 @@ wpm g = if secondsElapsed g == 0 then 0 else cps * (60 / 5)
   where
     cps = fromIntegral (numCorrectChars g) / secondsElapsed g
 
+accuracy :: Game -> Double
+accuracy g = ((/) `on` fromIntegral) (g ^. (quote . numChars)) (g ^. strokes)
+
 secondsElapsed :: Game -> Double
 secondsElapsed g = realToFrac $ diffUTCTime (g ^. lastUpdated) (g ^. start)
 
@@ -96,7 +100,8 @@ initializeGame q t =
       _input = E.editor () (Just 1) "",
       _quote = q,
       _start = t,
-      _lastUpdated = t
+      _lastUpdated = t,
+      _strokes = 0
     }
 
 initialState :: GameState

@@ -10,7 +10,7 @@ primaryAttr :: A.AttrName
 primaryAttr = A.attrName "primary"
 
 primaryColor :: V.Color
-primaryColor =  V.rgbColor 186 255 (201 :: Int)
+primaryColor = V.rgbColor 186 255 (201 :: Int)
 
 secondaryAttr :: A.AttrName
 secondaryAttr = A.attrName "secondary"
