@@ -34,15 +34,8 @@ instance ToJSON ClientState where
 
 instance WS.WebSocketsData ClientState where
   fromDataMessage d = case d of
-    WS.Text b mt -> fromJust $ decode b -- TODO use mt
-    WS.Binary b  -> fromJust $ decode b
-  fromLazyByteString = fromJust . decode -- TODO: sus
-  toLazyByteString = encode
-
-instance WS.WebSocketsData Quote where -- TODO: orphan
-  fromDataMessage d = case d of
-    WS.Text b mt -> fromJust $ decode b -- TODO use mt
-    WS.Binary b  -> fromJust $ decode b
+    WS.Text b _ -> fromJust $ decode b -- TODO use mt
+    WS.Binary b -> fromJust $ decode b
   fromLazyByteString = fromJust . decode -- TODO: sus
   toLazyByteString = encode
 
@@ -60,7 +53,7 @@ newtype ConnectionTick = ConnectionTick WS.Connection
 data Online = Online {_localGame :: Game, _clientStates :: [ClientState]}
 
 initialOnline :: Quote -> Online -- TODO: very sus
-initialOnline q = Online {_localGame = initializeGame q, _clientStates = []} -- TODO: don't really need quote in server state
+initialOnline q = Online {_localGame = initializeGame q, _clientStates = []}
 
 makeLenses ''Online
 
@@ -82,31 +75,31 @@ removeClient client ss = ss & clients %~ filter (((/=) `on` (^. (state . clientN
 main :: IO ()
 main = do
   q <- generateQuote
-  state <- newMVar (newServerState q)
-  WS.runServer "127.0.0.1" 9160 $ application state
+  st <- newMVar (newServerState q)
+  WS.runServer "127.0.0.1" 9160 $ application st
 
 application :: MVar ServerState -> WS.ServerApp
 application mState pending = do
   conn <- WS.acceptRequest pending
-  WS.forkPingThread conn 30
-  _ <- readMVar mState >>= (\s -> WS.sendTextData conn (s ^. serverQuote))
-  cs <- WS.receiveData conn
-  -- ss <- readMVar state
-  case cs of
-    _
-      | otherwise -> flip finally disconnect $ do
-        modifyMVar_ mState $ \s -> do
-          let s' = addClient client s
-          broadcast (client ^. state) s'
-          return s'
-        talk conn mState
-      where
-        client = Client {_state = cs, _connection = conn}
-        disconnect = do
-          -- Remove client and return new state
-          s <- modifyMVar mState $ \s ->
-            let s' = removeClient client s in return (s', s')
-          broadcast (client ^. state) s
+  WS.withPingThread conn 30 (return ()) $ do
+    _ <- readMVar mState >>= (\s -> WS.sendTextData conn (s ^. serverQuote))
+    cs <- WS.receiveData conn
+    -- ss <- readMVar state
+    case cs of
+      _
+        | otherwise -> flip finally disconnect $ do
+          modifyMVar_ mState $ \s -> do
+            let s' = addClient client s
+            broadcast (client ^. state) s'
+            return s'
+          talk conn mState
+        where
+          client = Client {_state = cs, _connection = conn}
+          disconnect = do
+            -- Remove client and return new state
+            s <- modifyMVar mState $ \s ->
+              let s' = removeClient client s in return (s', s')
+            broadcast (client ^. state) s
 
 talk :: WS.Connection -> MVar ServerState -> IO () -- TODO: client arg?
 talk conn mState = forever $ do

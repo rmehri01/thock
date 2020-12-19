@@ -1,4 +1,4 @@
-module UI.Online where -- TODO: name might be confused
+module UI.Online where
 
 import           Brick
 import qualified Brick.Main             as M
