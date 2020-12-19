@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Thock where
 
@@ -110,16 +110,6 @@ initializeGame q =
 
 initialState :: GameState
 initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
-
-startGame :: Quote -> GameState -> GameState
-startGame q gs = case gs of
-  MainMenu l -> startGameMainMenu l q
-  Practice _ -> startPracticeGame q
-
-startGameMainMenu :: MenuList -> Quote -> GameState
-startGameMainMenu l q = case L.listSelected l of
-  Just i  -> if i == 0 then startPracticeGame q else undefined -- TODO: move to ui
-  Nothing -> MainMenu l
 
 startPracticeGame :: Quote -> GameState
 startPracticeGame q = Practice {_game = initializeGame q}

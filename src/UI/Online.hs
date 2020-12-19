@@ -2,11 +2,9 @@ module UI.Online where
 
 import           Brick
 import qualified Brick.Main             as M
-import qualified Brick.Widgets.Edit     as E
 import           Control.Monad.IO.Class
 import           Data.Foldable
 import qualified Data.Function
-import           Data.Time
 import qualified Graphics.Vty           as V
 import           Lens.Micro
 import qualified Network.WebSockets     as WS
@@ -38,18 +36,11 @@ handleKeyOnline o (AppEvent (ConnectionTick conn)) = do
 handleKeyOnline o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc []      -> M.halt o
-    -- V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
-    -- V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
-    -- V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
     V.EvKey (V.KChar _) [] -> nextState (o & (localGame . strokes) +~ 1)
     _                      -> nextState o
   where
-    nextState :: Online -> EventM () (Next Online)
     nextState o' =
       if isDone (o' ^. localGame)
         then M.continue o'
-        else do
-          gEdited <- handleEventLensed (o' ^. localGame) input E.handleEditorEvent ev
-          currentTime <- liftIO getCurrentTime
-          M.continue (o' & localGame .~ updateTime currentTime (movePromptCursor gEdited))
+        else updateGame (o' ^. localGame) ev >>= M.continue . (\g -> o' & localGame .~ g)
 handleKeyOnline o _ = M.continue o

@@ -3,18 +3,18 @@
 module UI.Common where
 
 import           Brick
-import qualified Brick.Main                 as M
 import qualified Brick.Widgets.Border       as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center       as C
 import qualified Brick.Widgets.Edit         as E
 import qualified Brick.Widgets.ProgressBar  as P
-import           Control.Applicative
 import           Control.Monad.IO.Class
 import           Data.FileEmbed
 import           Data.Foldable
 import qualified Data.Text                  as T
 import           Data.Text.Encoding
+import           Data.Time
+import           Graphics.Vty               (Event)
 import           Lens.Micro
 import           Quotes
 import           Text.Printf
@@ -103,7 +103,8 @@ drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. inp
 addBorder :: T.Text -> Widget () -> Widget ()
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
 
-startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState) -- TODO: might serve a different purpose, not sure if startGame should be in
-startGameM mq gs = liftIO generatedGameState >>= M.continue
-  where
-    generatedGameState = liftA2 startGame (maybe generateQuote pure mq) (pure gs)
+updateGame :: Game -> Event -> EventM () Game
+updateGame g ev = do
+  gEdited <- handleEventLensed g input E.handleEditorEvent ev
+  currentTime <- liftIO getCurrentTime
+  return . updateTime currentTime $ movePromptCursor gEdited
