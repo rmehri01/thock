@@ -2,25 +2,25 @@
 
 module Thock where
 
-import qualified Brick.Widgets.Edit  as E
-import qualified Brick.Widgets.List  as L
-import           Control.Applicative
-import           Data.Function
-import qualified Data.Text           as T
-import           Data.Text.Zipper
-import           Data.Time
-import qualified Data.Vector         as Vec
-import           Lens.Micro
-import           Lens.Micro.TH
-import           Quotes
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List as L
+import Control.Applicative
+import Data.Function
+import qualified Data.Text as T
+import Data.Text.Zipper
+import Data.Time
+import qualified Data.Vector as Vec
+import Lens.Micro
+import Lens.Micro.TH
+import Quotes
 
 data Game = Game
-  { _prompt      :: TextZipper T.Text,
-    _input       :: E.Editor T.Text (),
-    _quote       :: Quote,
-    _start       :: Maybe UTCTime,
+  { _prompt :: TextZipper T.Text,
+    _input :: E.Editor T.Text (),
+    _quote :: Quote,
+    _start :: Maybe UTCTime,
     _lastUpdated :: Maybe UTCTime,
-    _strokes     :: Int
+    _strokes :: Int
   }
 
 makeLenses ''Game
@@ -80,7 +80,7 @@ updateTime t g = g' & lastUpdated ?~ t
   where
     g' = case g ^. start of
       Nothing -> g & start ?~ t
-      _       -> g
+      _ -> g
 
 wpm :: Game -> Double
 wpm g = if s == 0 then 0 else cps * (60 / 5)

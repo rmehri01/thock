@@ -1,22 +1,27 @@
-{-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Online where
 
-import           Control.Concurrent (MVar, modifyMVar, modifyMVar_, newMVar,
-                                     readMVar)
-import           Control.Exception  (finally)
-import           Control.Monad      (forM_, forever)
-import           Data.Aeson
-import           Data.Function
-import           Data.Maybe
-import qualified Data.Text          as T
-import           GHC.Generics
-import           Lens.Micro
-import           Lens.Micro.TH
+import Control.Concurrent
+  ( MVar,
+    modifyMVar,
+    modifyMVar_,
+    newMVar,
+    readMVar,
+  )
+import Control.Exception (finally)
+import Control.Monad (forM_, forever)
+import Data.Aeson
+import Data.Function
+import Data.Maybe
+import qualified Data.Text as T
+import GHC.Generics
+import Lens.Micro
+import Lens.Micro.TH
 import qualified Network.WebSockets as WS
-import           Quotes
-import           Thock
+import Quotes
+import Thock
 
 -- TODO: working but client and server are out of sync, can we just send whole list, also how tf do you retain the name (might have to save local client state and other client states).
 data PlayerStatusMessage = Add | Update | Remove -- TODO: send this on each update? what about people who just joined -> wont get updates until later, could send them state of server on join?
@@ -72,8 +77,8 @@ addClient client ss = ss & clients %~ (:) client
 removeClient :: Client -> ServerState -> ServerState
 removeClient client ss = ss & clients %~ filter (((/=) `on` (^. (state . clientName))) client)
 
-main :: IO ()
-main = do
+runServer :: IO ()
+runServer = do
   q <- generateQuote
   st <- newMVar (newServerState q)
   WS.runServer "127.0.0.1" 9160 $ application st

@@ -1,17 +1,17 @@
 module UI.Online where
 
-import           Brick
-import qualified Brick.Main             as M
-import           Control.Monad.IO.Class
-import           Data.Foldable
+import Brick
+import qualified Brick.Main as M
+import Control.Monad.IO.Class
+import Data.Foldable
 import qualified Data.Function
-import qualified Graphics.Vty           as V
-import           Lens.Micro
-import qualified Network.WebSockets     as WS
-import           Online
-import           Thock
-import           UI.Attributes
-import           UI.Common
+import qualified Graphics.Vty as V
+import Lens.Micro
+import qualified Network.WebSockets as WS
+import Online
+import Thock
+import UI.Attributes
+import UI.Common
 
 onlineApp :: M.App Online ConnectionTick ()
 onlineApp =
@@ -35,9 +35,9 @@ handleKeyOnline o (AppEvent (ConnectionTick conn)) = do
   M.continue (o & clientStates %~ (\cs -> cReceived : filter (((/=) `Data.Function.on` (^. clientName)) cReceived) cs))
 handleKeyOnline o (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc []      -> M.halt o
+    V.EvKey V.KEsc [] -> M.halt o
     V.EvKey (V.KChar _) [] -> nextState (o & (localGame . strokes) +~ 1)
-    _                      -> nextState o
+    _ -> nextState o
   where
     nextState o' =
       if isDone (o' ^. localGame)

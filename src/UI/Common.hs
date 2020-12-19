@@ -2,24 +2,24 @@
 
 module UI.Common where
 
-import           Brick
-import qualified Brick.Widgets.Border       as B
+import Brick
+import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
-import qualified Brick.Widgets.Center       as C
-import qualified Brick.Widgets.Edit         as E
-import qualified Brick.Widgets.ProgressBar  as P
-import           Control.Monad.IO.Class
-import           Data.FileEmbed
-import           Data.Foldable
-import qualified Data.Text                  as T
-import           Data.Text.Encoding
-import           Data.Time
-import           Graphics.Vty               (Event)
-import           Lens.Micro
-import           Quotes
-import           Text.Printf
-import           Thock
-import           UI.Attributes
+import qualified Brick.Widgets.Center as C
+import qualified Brick.Widgets.Edit as E
+import qualified Brick.Widgets.ProgressBar as P
+import Control.Monad.IO.Class
+import Data.FileEmbed
+import Data.Foldable
+import qualified Data.Text as T
+import Data.Text.Encoding
+import Data.Time
+import Graphics.Vty (Event)
+import Lens.Micro
+import Quotes
+import Text.Printf
+import Thock
+import UI.Attributes
 
 titleWidget :: Widget ()
 titleWidget =

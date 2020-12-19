@@ -1,10 +1,10 @@
 module UI.Attributes where
 
-import qualified Brick.AttrMap             as A
-import           Brick.Util
-import qualified Brick.Widgets.List        as L
+import qualified Brick.AttrMap as A
+import Brick.Util
+import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
-import qualified Graphics.Vty              as V
+import qualified Graphics.Vty as V
 
 primaryAttr :: A.AttrName
 primaryAttr = A.attrName "primary"

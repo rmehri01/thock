@@ -1,23 +1,23 @@
 --------------------------------------------------------------------------------
 module Client
-  ( runOnline,
+  ( runClient,
   )
 where
 
 --------------------------------------------------------------------------------
-import           Brick
-import           Brick.BChan
-import           Control.Concurrent (forkIO, threadDelay)
-import           Control.Monad      (forever)
-import           Data.Text          (Text)
-import qualified Graphics.Vty       as V
-import           Lens.Micro
-import           Network.Socket     (withSocketsDo)
+import Brick
+import Brick.BChan
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (forever)
+import Data.Text (Text)
+import qualified Graphics.Vty as V
+import Lens.Micro
+import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
-import           Online
-import           Quotes
-import           Thock
-import           UI.Online
+import Online
+import Quotes
+import Thock
+import UI.Online
 
 --------------------------------------------------------------------------------
 app :: WS.ClientApp ()
@@ -39,5 +39,5 @@ app conn = do
   WS.sendClose conn ("Bye!" :: Text)
 
 --------------------------------------------------------------------------------
-runOnline :: IO ()
-runOnline = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" app
+runClient :: IO ()
+runClient = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" app

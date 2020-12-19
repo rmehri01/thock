@@ -1,16 +1,16 @@
 module UI.Offline where
 
-import           Brick
-import qualified Brick.Main             as M
-import qualified Brick.Widgets.List     as L
-import           Client
-import           Control.Monad.IO.Class
-import qualified Graphics.Vty           as V
-import           Lens.Micro
-import           Quotes
-import           Thock
-import           UI.Attributes
-import           UI.Common
+import Brick
+import qualified Brick.Main as M
+import qualified Brick.Widgets.List as L
+import Client
+import Control.Monad.IO.Class
+import qualified Graphics.Vty as V
+import Lens.Micro
+import Quotes
+import Thock
+import UI.Attributes
+import UI.Common
 
 draw :: GameState -> [Widget ()]
 draw s = case s of
@@ -34,7 +34,7 @@ handleKeyMainMenu l (VtyEvent e) = case e of
     Just i ->
       if i == 0
         then liftIO generateQuote >>= M.continue . startPracticeGame
-        else M.suspendAndResume (runOnline >> return (MainMenu l))
+        else M.suspendAndResume (runClient >> return (MainMenu l))
     Nothing -> M.continue (MainMenu l)
   ev -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
