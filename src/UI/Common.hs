@@ -69,9 +69,14 @@ roundToStr :: (PrintfArg a, Floating a) => Int -> a -> String
 roundToStr = printf "%0.*f"
 
 drawPrompt :: Game -> Widget ()
-drawPrompt g = addBorder "prompt" (C.center textWidget)
+drawPrompt g = addBorder "prompt" (C.center $ hLimitPercent 80 textWidget)
   where
-    textWidget = drawTextBlock (correctWidgets ++ incorrectWidgets ++ restWidgets) (lineLengths g 65) -- TODO: wrap by context or maybe config?
+    textWidget = Widget Fixed Fixed $ do
+      ctx <- getContext
+      render $
+        drawTextBlock
+          (correctWidgets ++ incorrectWidgets ++ restWidgets)
+          (lineLengths g (ctx ^. availWidthL))
     correctWidgets = withAttr correctAttr . txt . T.singleton <$> T.unpack correctText
     incorrectWidgets = withAttr incorrectAttr . txt . T.singleton <$> T.unpack incorrectText
     restWidgets = txt . T.singleton <$> T.unpack restText'
