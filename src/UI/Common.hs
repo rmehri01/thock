@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module UI.Common where
 
@@ -11,7 +11,10 @@ import qualified Brick.Widgets.Edit         as E
 import qualified Brick.Widgets.ProgressBar  as P
 import           Control.Applicative
 import           Control.Monad.IO.Class
+import           Data.FileEmbed
+import           Data.Foldable
 import qualified Data.Text                  as T
+import           Data.Text.Encoding
 import           Lens.Micro
 import           Quotes
 import           Text.Printf
@@ -22,12 +25,9 @@ titleWidget :: Widget ()
 titleWidget =
   C.center
     . withAttr titleAttr
-    $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
-      <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
-      <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
-      <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
-      <=> txt "   ██║   ██║  ██║╚██████╔╝╚██████╗██║  ██╗"
-      <=> txt "   ╚═╝   ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝"
+    $ logo
+  where
+    logo = foldl' (<=>) emptyWidget . map txt . T.lines $ decodeUtf8 $(embedFile "resources/logo.txt")
 
 listDrawElement :: Bool -> T.Text -> Widget ()
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t

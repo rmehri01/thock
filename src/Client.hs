@@ -1,6 +1,4 @@
 --------------------------------------------------------------------------------
-{-# LANGUAGE OverloadedStrings #-}
-
 module Client
   ( runOnline,
   )
