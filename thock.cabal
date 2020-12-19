@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3f5b8a67ba14abd0f5323106c73b30496f4b9a17f5d9d552d7315c736bd64936
+-- hash: 81be05a3591ea39ad7b32829be7f2da1512612556057ab596addd3ee603734a0
 
 name:           thock
 version:        0.1.0.0
@@ -31,12 +31,15 @@ library
       Online
       Quotes
       Thock
-      UI
       UI.Attributes
+      UI.Common
+      UI.Offline
+      UI.Online
   other-modules:
       Paths_thock
   hs-source-dirs:
       src
+  default-extensions: OverloadedStrings
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -61,6 +64,7 @@ executable thock-exe
       Paths_thock
   hs-source-dirs:
       app
+  default-extensions: OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson
@@ -88,6 +92,7 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
+  default-extensions: OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson

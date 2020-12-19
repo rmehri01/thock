@@ -36,6 +36,9 @@ dependencies:
 - vty
 - websockets
 
+default-extensions:
+  OverloadedStrings
+
 library:
   source-dirs: src
 

@@ -1,8 +1,8 @@
 module Main where
 
 import qualified Brick.Main as M
-import           Thock
-import           UI
+import Thock
+import UI.Offline
 
 main :: IO ()
 main = do

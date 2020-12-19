@@ -31,7 +31,6 @@ type MenuList = L.List () T.Text
 data GameState
   = MainMenu {_list :: MenuList}
   | Practice {_game :: Game}
-  | Online
 
 makeLenses ''GameState
 
@@ -85,7 +84,7 @@ updateTime t g = g' & lastUpdated ?~ t
       _       -> g
 
 wpm :: Game -> Double
-wpm g =  if s == 0 then 0 else cps * (60 / 5)
+wpm g = if s == 0 then 0 else cps * (60 / 5)
   where
     cps = fromIntegral (numCorrectChars g) / s
     s = secondsElapsed g
@@ -116,13 +115,12 @@ initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
 startGame :: Quote -> GameState -> GameState
 startGame q gs = case gs of
   MainMenu l -> startGameMainMenu l q
-  Practice _ -> nextPracticeGame q
-  Online     -> undefined
+  Practice _ -> startPracticeGame q
 
 startGameMainMenu :: MenuList -> Quote -> GameState
 startGameMainMenu l q = case L.listSelected l of
-  Just i  -> if i == 0 then Practice (initializeGame q) else Online
+  Just i  -> if i == 0 then startPracticeGame q else undefined -- TODO: move to ui
   Nothing -> MainMenu l
 
-nextPracticeGame :: Quote -> GameState
-nextPracticeGame q = Practice (initializeGame q)
+startPracticeGame :: Quote -> GameState
+startPracticeGame q = Practice {_game = initializeGame q}

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module UI where
+module UI.Common where
 
 import           Brick
 import qualified Brick.Main                 as M
@@ -8,35 +8,21 @@ import qualified Brick.Widgets.Border       as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center       as C
 import qualified Brick.Widgets.Edit         as E
-import qualified Brick.Widgets.List         as L
 import qualified Brick.Widgets.ProgressBar  as P
 import           Control.Applicative
 import           Control.Monad.IO.Class
 import qualified Data.Text                  as T
-import           Data.Time
-import qualified Graphics.Vty               as V
 import           Lens.Micro
 import           Quotes
 import           Text.Printf
 import           Thock
 import           UI.Attributes
 
-draw :: GameState -> [Widget ()]
-draw s = case s of
-  MainMenu l -> drawMain l
-  Practice g -> drawPractice g
-  Online     -> drawOnline undefined
-
-drawMain :: MenuList -> [Widget ()]
-drawMain l = [addBorder "" (titleWidget <=> listWidget)]
-  where
-    listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
-
 titleWidget :: Widget ()
 titleWidget =
   C.center
     . withAttr titleAttr
-        $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
+    $ txt "████████╗██╗  ██╗ ██████╗  ██████╗██╗  ██╗"
       <=> txt "╚══██╔══╝██║  ██║██╔═══██╗██╔════╝██║ ██╔╝"
       <=> txt "   ██║   ███████║██║   ██║██║     █████╔╝ "
       <=> txt "   ██║   ██╔══██║██║   ██║██║     ██╔═██╗ "
@@ -64,9 +50,6 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
     timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
     sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
     instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
-
-drawOnline :: Game -> [Widget ()]
-drawOnline = undefined
 
 drawProgressBar :: Game -> Widget ()
 drawProgressBar g = progressWidget <+> wpmWidget
@@ -120,52 +103,7 @@ drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. inp
 addBorder :: T.Text -> Widget () -> Widget ()
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
 
-handleKey :: GameState -> BrickEvent () e -> EventM () (Next GameState)
-handleKey gs ev = case gs of
-  MainMenu l -> handleKeyMainMenu l ev
-  Practice g -> handleKeyPractice g ev
-  Online     -> handleKeyOnline undefined ev
-
-handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
-handleKeyMainMenu l (VtyEvent e) = case e of
-  V.EvKey V.KEsc []   -> M.halt (MainMenu l)
-  V.EvKey V.KEnter [] -> startGameM Nothing (MainMenu l)
-  ev                  -> L.handleListEvent ev l >>= M.continue . MainMenu
-handleKeyMainMenu l _ = M.continue (MainMenu l)
-
-handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
-handleKeyPractice g (VtyEvent ev) =
-  case ev of
-    V.EvKey V.KEsc [] -> M.halt (Practice g)
-    V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
-    V.EvKey (V.KChar 'r') [V.MCtrl] -> startGameM (Just $ g ^. quote) (Practice g)
-    V.EvKey (V.KChar 'n') [V.MCtrl] -> startGameM Nothing (Practice g)
-    V.EvKey (V.KChar _) [] -> nextState (g & strokes +~ 1)
-    _ -> nextState g
-  where
-    nextState g' =
-      if isDone g'
-        then M.continue (Practice g')
-        else do
-          gEdited <- handleEventLensed g' input E.handleEditorEvent ev
-          currentTime <- liftIO getCurrentTime
-          M.continue . Practice . updateTime currentTime $ movePromptCursor gEdited
-handleKeyPractice g _ = M.continue (Practice g)
-
-handleKeyOnline :: Game -> BrickEvent () e -> EventM () (Next GameState)
-handleKeyOnline = undefined
-
-startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState)
+startGameM :: Maybe Quote -> GameState -> EventM () (Next GameState) -- TODO: might serve a different purpose, not sure if startGame should be in
 startGameM mq gs = liftIO generatedGameState >>= M.continue
   where
     generatedGameState = liftA2 startGame (maybe generateQuote pure mq) (pure gs)
-
-theApp :: M.App GameState e ()
-theApp =
-  M.App
-    { M.appDraw = draw,
-      M.appChooseCursor = showFirstCursor,
-      M.appHandleEvent = handleKey,
-      M.appStartEvent = return,
-      M.appAttrMap = const theMap
-    }
