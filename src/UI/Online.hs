@@ -28,9 +28,7 @@ drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> 
     g = o ^. localGame
 
 handleKeyOnline :: Online -> BrickEvent () ConnectionTick -> EventM () (Next Online)
-handleKeyOnline o (AppEvent (ConnectionTick conn)) = do
-  Update csReceived <- liftIO $ WS.receiveData conn -- TODO: handle possibility of failure
-  _ <- liftIO $ WS.sendTextData conn (ClientState {_clientName = o ^. onlineName, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)}) -- TODO: not sure about sending here
+handleKeyOnline o (AppEvent (ConnectionTick (Update csReceived))) = do
   M.continue (o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) csReceived)
 handleKeyOnline o (VtyEvent ev) =
   case ev of
@@ -41,5 +39,8 @@ handleKeyOnline o (VtyEvent ev) =
     nextState o' =
       if isDone (o' ^. localGame)
         then M.continue o'
-        else updateGame (o' ^. localGame) ev >>= M.continue . (\g -> o' & localGame .~ g)
+        else do
+          updatedGame <- updateGame (o' ^. localGame) ev
+          _ <- liftIO $ WS.sendTextData (o ^. onlineConnection) (ClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
+          M.continue (o' & localGame .~ updatedGame)
 handleKeyOnline o _ = M.continue o

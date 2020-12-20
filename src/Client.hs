@@ -7,7 +7,7 @@ where
 --------------------------------------------------------------------------------
 import Brick
 import Brick.BChan
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (forkIO)
 import Control.Monad (forever)
 import Data.Text (Text)
 import qualified Graphics.Vty as V
@@ -27,13 +27,14 @@ app conn = do
   -- Fork a thread that writes the connection to the custom event
   _ <- forkIO $
     forever $ do
-      writeBChan connChan (ConnectionTick conn) -- TODO: non blocking?
-      threadDelay 500000 -- tick every 0.5 seconds
+      cs <- WS.receiveData conn
+      writeBChan connChan (ConnectionTick cs)
+
   q <- WS.receiveData conn -- TODO: handle possibility of failure
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   name <- generateQuote -- TODO: get name from user
-  let o = initialOnline q (name ^. source)
+  let o = initialOnline q (name ^. source) conn
   _ <- WS.sendTextData conn (ClientState {_clientName = name ^. source, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
   _ <- customMain initialVty buildVty (Just connChan) onlineApp o
   WS.sendClose conn ("Bye!" :: Text)

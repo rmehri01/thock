@@ -23,11 +23,9 @@ import qualified Network.WebSockets as WS
 import Quotes
 import Thock
 
--- TODO: working but client and server are out of sync, can we just send whole list, also how tf do you retain the name (might have to save local client state and other client states).
 data PlayerStatusMessage
   = Add
   | Update [ClientState]
-  | Remove
   deriving (Generic)
 
 instance FromJSON PlayerStatusMessage
@@ -68,12 +66,12 @@ data ServerState = ServerState {_serverQuote :: Quote, _clients :: [Client]}
 
 makeLenses ''ServerState
 
-newtype ConnectionTick = ConnectionTick WS.Connection
+newtype ConnectionTick = ConnectionTick PlayerStatusMessage
 
-data Online = Online {_localGame :: Game, _onlineName :: T.Text, _clientStates :: [ClientState]}
+data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [ClientState]}
 
-initialOnline :: Quote -> T.Text -> Online -- TODO: very sus
-initialOnline q name = Online {_localGame = initializeGame q, _onlineName = name, _clientStates = []}
+initialOnline :: Quote -> T.Text -> WS.Connection -> Online
+initialOnline q name conn = Online {_localGame = initializeGame q, _onlineName = name, _onlineConnection = conn, _clientStates = []}
 
 makeLenses ''Online
 
@@ -124,14 +122,14 @@ application mState pending = do
               let s' = removeClient client s in return (s', s')
             broadcast s
 
-talk :: WS.Connection -> MVar ServerState -> IO () -- TODO: client arg?
+talk :: WS.Connection -> MVar ServerState -> IO ()
 talk conn mState = forever $ do
   c <- WS.receiveData conn
   s <- modifyMVar mState $ \s ->
     let s' = updateClient c s in return (s', s')
   broadcast s
 
-broadcast :: ServerState -> IO () -- TODO: need to send all users at once?
+broadcast :: ServerState -> IO ()
 broadcast ss = forM_ cs $ \(Client _ conn) -> WS.sendTextData conn (Update $ map (^. state) cs)
   where
     cs = ss ^. clients
