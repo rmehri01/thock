@@ -82,8 +82,8 @@ updateTime t g = g' & lastUpdated ?~ t
       Nothing -> g & start ?~ t
       _ -> g
 
-wpm :: Game -> Double
-wpm g = if s == 0 then 0 else cps * (60 / 5)
+calculateWpm :: Game -> Double
+calculateWpm g = if s == 0 then 0 else cps * (60 / 5)
   where
     cps = fromIntegral (numCorrectChars g) / s
     s = secondsElapsed g

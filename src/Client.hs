@@ -32,9 +32,9 @@ app conn = do
   q <- WS.receiveData conn -- TODO: handle possibility of failure
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  let o = initialOnline q
-  name <- generateQuote
-  _ <- WS.sendTextData conn (ClientState {_clientName = name ^. source, _clientProgress = realToFrac $ progress (o ^. localGame), _clientWpm = floor $ wpm (o ^. localGame)})
+  name <- generateQuote -- TODO: get name from user
+  let o = initialOnline q (name ^. source)
+  _ <- WS.sendTextData conn (ClientState {_clientName = name ^. source, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
   _ <- customMain initialVty buildVty (Just connChan) onlineApp o
   WS.sendClose conn ("Bye!" :: Text)
 

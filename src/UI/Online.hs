@@ -4,7 +4,6 @@ import Brick
 import qualified Brick.Main as M
 import Control.Monad.IO.Class
 import Data.Foldable
-import qualified Data.Function
 import qualified Graphics.Vty as V
 import Lens.Micro
 import qualified Network.WebSockets as WS
@@ -24,15 +23,15 @@ onlineApp =
     }
 
 drawOnline :: Online -> [Widget ()]
-drawOnline o = [drawFinished g, drawProgressBar g <=> foldl' (\w c -> w <=> txt (c ^. clientName)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
+drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> drawProgressBar (c ^. clientProgress) (c ^. clientWpm)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
   where
     g = o ^. localGame
 
 handleKeyOnline :: Online -> BrickEvent () ConnectionTick -> EventM () (Next Online)
 handleKeyOnline o (AppEvent (ConnectionTick conn)) = do
-  cReceived <- liftIO $ WS.receiveData conn -- TODO: handle possibility of failure
-  _ <- liftIO $ WS.sendTextData conn (ClientState {_clientName = "frink", _clientProgress = realToFrac $ progress (o ^. localGame), _clientWpm = floor $ wpm (o ^. localGame)})
-  M.continue (o & clientStates %~ (\cs -> cReceived : filter (((/=) `Data.Function.on` (^. clientName)) cReceived) cs))
+  Update csReceived <- liftIO $ WS.receiveData conn -- TODO: handle possibility of failure
+  _ <- liftIO $ WS.sendTextData conn (ClientState {_clientName = o ^. onlineName, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)}) -- TODO: not sure about sending here
+  M.continue (o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) csReceived)
 handleKeyOnline o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt o

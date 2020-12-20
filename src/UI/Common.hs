@@ -38,29 +38,31 @@ listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
         else "  "
 
 drawPractice :: Game -> [Widget ()]
-drawPractice g = [drawFinished g, drawProgressBar g <=> drawPrompt g <=> drawInput g]
+drawPractice g = [drawFinished g, drawProgressBarGame g <=> drawPrompt g <=> drawInput g]
 
 drawFinished :: Game -> Widget ()
 drawFinished g = if isDone g then doneWidget else emptyWidget
   where
     doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
     stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
-    speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm g)
+    speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm (calculateWpm g))
     accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 "%" (accuracy g * 100))
     timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
     sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
     instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
-drawProgressBar :: Game -> Widget ()
-drawProgressBar g = progressWidget <+> wpmWidget
-  where
-    progressWidget = addBorder "progress" (P.progressBar (Just percentStr) amountDone)
-    percentStr = roundToStr 1 (amountDone * 100) ++ "%"
-    amountDone = progress g
-    wpmWidget = addBorder "" (drawWpm g)
+drawProgressBarGame :: Game -> Widget ()
+drawProgressBarGame g = drawProgressBar (progress g) (calculateWpm g)
 
-drawWpm :: Game -> Widget ()
-drawWpm = drawFloatWithSuffix 0 " WPM" . wpm
+drawProgressBar :: Float -> Double -> Widget ()
+drawProgressBar decimalDone wpm = progressWidget <+> wpmWidget
+  where
+    progressWidget = addBorder "progress" (P.progressBar (Just percentStr) decimalDone)
+    percentStr = roundToStr 1 (decimalDone * 100) ++ "%"
+    wpmWidget = addBorder "" (drawWpm wpm)
+
+drawWpm :: Double -> Widget ()
+drawWpm = drawFloatWithSuffix 0 " WPM"
 
 drawFloatWithSuffix :: (PrintfArg a, Floating a) => Int -> String -> a -> Widget ()
 drawFloatWithSuffix n s = str . (++ s) . roundToStr n

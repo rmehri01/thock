@@ -24,9 +24,24 @@ import Quotes
 import Thock
 
 -- TODO: working but client and server are out of sync, can we just send whole list, also how tf do you retain the name (might have to save local client state and other client states).
-data PlayerStatusMessage = Add | Update | Remove -- TODO: send this on each update? what about people who just joined -> wont get updates until later, could send them state of server on join?
+data PlayerStatusMessage
+  = Add
+  | Update [ClientState]
+  | Remove
+  deriving (Generic)
 
-data ClientState = ClientState {_clientName :: T.Text, _clientProgress :: Double, _clientWpm :: Int} -- TODO: overlapping, make better use of lens
+instance FromJSON PlayerStatusMessage
+
+instance ToJSON PlayerStatusMessage
+
+instance WS.WebSocketsData PlayerStatusMessage where
+  fromDataMessage d = case d of
+    WS.Text b _ -> fromJust $ decode b -- TODO use mt
+    WS.Binary b -> fromJust $ decode b
+  fromLazyByteString = fromJust . decode -- TODO: sus
+  toLazyByteString = encode
+
+data ClientState = ClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
   deriving (Generic)
 
 makeLenses ''ClientState
@@ -55,10 +70,10 @@ makeLenses ''ServerState
 
 newtype ConnectionTick = ConnectionTick WS.Connection
 
-data Online = Online {_localGame :: Game, _clientStates :: [ClientState]}
+data Online = Online {_localGame :: Game, _onlineName :: T.Text, _clientStates :: [ClientState]}
 
-initialOnline :: Quote -> Online -- TODO: very sus
-initialOnline q = Online {_localGame = initializeGame q, _clientStates = []}
+initialOnline :: Quote -> T.Text -> Online -- TODO: very sus
+initialOnline q name = Online {_localGame = initializeGame q, _onlineName = name, _clientStates = []}
 
 makeLenses ''Online
 
@@ -76,6 +91,9 @@ addClient client ss = ss & clients %~ (:) client
 
 removeClient :: Client -> ServerState -> ServerState
 removeClient client ss = ss & clients %~ filter (((/=) `on` (^. (state . clientName))) client)
+
+updateClient :: ClientState -> ServerState -> ServerState
+updateClient cs ss = ss & clients %~ map (\c -> if c ^. (state . clientName) == cs ^. clientName then c & state .~ cs else c)
 
 runServer :: IO ()
 runServer = do
@@ -95,7 +113,7 @@ application mState pending = do
         | otherwise -> flip finally disconnect $ do
           modifyMVar_ mState $ \s -> do
             let s' = addClient client s
-            broadcast (client ^. state) s'
+            broadcast s'
             return s'
           talk conn mState
         where
@@ -104,15 +122,17 @@ application mState pending = do
             -- Remove client and return new state
             s <- modifyMVar mState $ \s ->
               let s' = removeClient client s in return (s', s')
-            broadcast (client ^. state) s
+            broadcast s
 
 talk :: WS.Connection -> MVar ServerState -> IO () -- TODO: client arg?
 talk conn mState = forever $ do
   c <- WS.receiveData conn
-  readMVar mState >>= broadcast c
+  s <- modifyMVar mState $ \s ->
+    let s' = updateClient c s in return (s', s')
+  broadcast s
 
-broadcast :: ClientState -> ServerState -> IO () -- TODO: need to send all users at once?
-broadcast c ss = forM_ cs $ \(Client _ conn) -> WS.sendTextData conn c
+broadcast :: ServerState -> IO () -- TODO: need to send all users at once?
+broadcast ss = forM_ cs $ \(Client _ conn) -> WS.sendTextData conn (Update $ map (^. state) cs)
   where
     cs = ss ^. clients
 

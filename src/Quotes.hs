@@ -17,7 +17,7 @@ data Quote = Quote
     _source :: T.Text,
     _numChars :: Int
   }
-  deriving (Show, Generic)
+  deriving (Generic)
 
 makeLenses ''Quote
 
