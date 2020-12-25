@@ -1,10 +1,13 @@
 module UI.Offline where
 
 import Brick
+import Brick.Forms
 import qualified Brick.Main as M
+import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import Client
 import Control.Monad.IO.Class
+import qualified Data.Text as T
 import qualified Graphics.Vty as V
 import Lens.Micro
 import Quotes
@@ -12,34 +15,91 @@ import Thock
 import UI.Attributes
 import UI.Common
 
-draw :: GameState -> [Widget ()]
+draw :: GameState -> [Widget ResourceName]
 draw s = case s of
-  MainMenu l -> drawMain l
+  MainMenu l -> drawList l
+  OnlineSelect l -> drawList l
+  CreateRoom form -> drawForm form
+  JoinRoom form -> drawForm form
   Practice g -> drawPractice g
 
-drawMain :: MenuList -> [Widget ()]
-drawMain l = [addBorder "" (titleWidget <=> listWidget)]
+drawList :: MenuList -> [Widget ResourceName]
+drawList l = [addBorder "" (titleWidget <=> listWidget)]
   where
     listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
 
-handleKey :: GameState -> BrickEvent () e -> EventM () (Next GameState)
+drawForm :: RoomForm a -> [Widget ResourceName]
+drawForm form = [C.center (renderForm form)]
+
+handleKey :: GameState -> BrickEvent ResourceName () -> EventM ResourceName (Next GameState)
 handleKey gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
+  OnlineSelect l -> handleKeyOnlineSelect l ev
+  CreateRoom form -> handleKeyForm CreateRoom undefined form ev
+  JoinRoom form -> handleKeyForm JoinRoom undefined form ev
   Practice g -> handleKeyPractice g ev
 
-handleKeyMainMenu :: MenuList -> BrickEvent () e -> EventM () (Next GameState)
+handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.halt (MainMenu l)
-  V.EvKey V.KEnter [] -> case L.listSelected l of
-    Just i ->
+  V.EvKey V.KEnter []
+    | Just i <- L.listSelected l ->
       if i == 0
         then liftIO generateQuote >>= M.continue . startPracticeGame
-        else M.suspendAndResume (runClient >> return (MainMenu l))
-    Nothing -> M.continue (MainMenu l)
+        else M.continue onlineSelectState
   ev -> L.handleListEvent ev l >>= M.continue . MainMenu
 handleKeyMainMenu l _ = M.continue (MainMenu l)
 
-handleKeyPractice :: Game -> BrickEvent () e -> EventM () (Next GameState)
+handleKeyOnlineSelect :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
+handleKeyOnlineSelect l (VtyEvent e) = case e of
+  V.EvKey V.KEsc [] -> M.continue initialState
+  V.EvKey V.KEnter []
+    | Just i <- L.listSelected l ->
+      M.continue
+        ( if i == 0
+            then CreateRoom (mkCreateRoomForm emptyUsername)
+            else JoinRoom (mkJoinRoomForm emptyRoomFormData)
+        )
+    where
+      emptyUsername = Username ""
+      emptyRoomFormData = RoomFormData emptyUsername ""
+  ev -> L.handleListEvent ev l >>= M.continue . OnlineSelect
+handleKeyOnlineSelect l _ = M.continue (OnlineSelect l)
+
+handleKeyForm ::
+  (RoomForm a -> GameState) ->
+  (a -> IO ()) ->
+  RoomForm a ->
+  BrickEvent ResourceName () ->
+  EventM ResourceName (Next GameState)
+handleKeyForm ctr onEnter form ev@(VtyEvent e) = case e of
+  V.EvKey V.KEsc [] -> M.continue initialState
+  V.EvKey V.KEnter [] -> M.suspendAndResume (onEnter (formState form) >> return initialState)
+  _ -> handleFormEvent ev form >>= M.continue . ctr
+handleKeyForm ctr _ form _ = M.continue (ctr form)
+
+mkCreateRoomForm :: Username -> RoomForm Username
+mkCreateRoomForm =
+  newForm
+    [ formLabel "Username"
+        @@= editTextField value UsernameField (Just 1)
+    ]
+
+mkJoinRoomForm :: RoomFormData -> RoomForm RoomFormData
+mkJoinRoomForm =
+  newForm
+    [ formLabel "Username"
+        @@= editTextField (username . value) UsernameField (Just 1),
+      formLabel "Room ID"
+        @@= editTextField roomId RoomIdField (Just 1)
+    ]
+
+formLabel :: T.Text -> Widget n -> Widget n
+formLabel t w =
+  padBottom (Pad 1) $
+    vLimit 1 (hLimit 15 $ txt t <+> fill ' ') <+> w
+
+handleKeyPractice :: Game -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
 handleKeyPractice g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (Practice g)
@@ -55,7 +115,7 @@ handleKeyPractice g (VtyEvent ev) =
         else updateGame g' ev >>= M.continue . Practice
 handleKeyPractice g _ = M.continue (Practice g)
 
-theApp :: M.App GameState e ()
+theApp :: M.App GameState () ResourceName
 theApp =
   M.App
     { M.appDraw = draw,

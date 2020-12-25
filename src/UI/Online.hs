@@ -12,7 +12,7 @@ import Thock
 import UI.Attributes
 import UI.Common
 
-onlineApp :: M.App Online ConnectionTick ()
+onlineApp :: M.App Online ConnectionTick ResourceName
 onlineApp =
   M.App
     { M.appDraw = drawOnline,
@@ -22,12 +22,12 @@ onlineApp =
       M.appAttrMap = const theMap
     }
 
-drawOnline :: Online -> [Widget ()]
+drawOnline :: Online -> [Widget ResourceName]
 drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> drawProgressBar (c ^. clientProgress) (c ^. clientWpm)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
   where
     g = o ^. localGame
 
-handleKeyOnline :: Online -> BrickEvent () ConnectionTick -> EventM () (Next Online)
+handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
 handleKeyOnline o (AppEvent (ConnectionTick (Update csReceived))) = do
   M.continue (o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) csReceived)
 handleKeyOnline o (VtyEvent ev) =

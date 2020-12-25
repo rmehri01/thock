@@ -1,7 +1,9 @@
 module UI.Attributes where
 
 import qualified Brick.AttrMap as A
+import Brick.Forms
 import Brick.Util
+import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Graphics.Vty as V
@@ -39,5 +41,8 @@ theMap =
       (P.progressIncompleteAttr, V.white `on` V.black),
       (correctAttr, fg V.green),
       (incorrectAttr, bg V.red),
-      (titleAttr, fg primaryColor)
+      (titleAttr, fg primaryColor),
+      (E.editFocusedAttr, V.black `on` V.yellow),
+      (invalidFormInputAttr, V.white `on` V.red),
+      (focusedFormInputAttr, V.black `on` V.yellow)
     ]

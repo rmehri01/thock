@@ -2,6 +2,7 @@
 
 module Thock where
 
+import Brick.Forms
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Applicative
@@ -14,9 +15,15 @@ import Lens.Micro
 import Lens.Micro.TH
 import Quotes
 
+data ResourceName
+  = UsernameField
+  | RoomIdField
+  | Ordinary
+  deriving (Eq, Ord, Show)
+
 data Game = Game
   { _prompt :: TextZipper T.Text,
-    _input :: E.Editor T.Text (),
+    _input :: E.Editor T.Text ResourceName,
     _quote :: Quote,
     _start :: Maybe UTCTime,
     _lastUpdated :: Maybe UTCTime,
@@ -25,11 +32,27 @@ data Game = Game
 
 makeLenses ''Game
 
-type MenuList = L.List () T.Text
+type MenuList = L.List ResourceName T.Text
+
+newtype Username = Username {_value :: T.Text}
+
+makeLenses ''Username
+
+data RoomFormData = RoomFormData
+  { _username :: Username,
+    _roomId :: T.Text
+  }
+
+makeLenses ''RoomFormData
+
+type RoomForm a = Form a () ResourceName
 
 data GameState
-  = MainMenu {_list :: MenuList}
-  | Practice {_game :: Game}
+  = MainMenu MenuList
+  | OnlineSelect MenuList
+  | CreateRoom (RoomForm Username)
+  | JoinRoom (RoomForm RoomFormData)
+  | Practice Game
 
 makeLenses ''GameState
 
@@ -101,7 +124,7 @@ initializeGame :: Quote -> Game
 initializeGame q =
   Game
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
-      _input = E.editor () (Just 1) "",
+      _input = E.editor Ordinary (Just 1) "",
       _quote = q,
       _start = Nothing,
       _lastUpdated = Nothing,
@@ -109,7 +132,10 @@ initializeGame q =
     }
 
 initialState :: GameState
-initialState = MainMenu (L.list () (Vec.fromList ["Practice", "Online"]) 2)
+initialState = MainMenu (L.list Ordinary (Vec.fromList ["Practice", "Online"]) 2)
+
+onlineSelectState :: GameState
+onlineSelectState = OnlineSelect (L.list Ordinary (Vec.fromList ["Create room", "Join room"]) 2)
 
 startPracticeGame :: Quote -> GameState
-startPracticeGame q = Practice {_game = initializeGame q}
+startPracticeGame q = Practice (initializeGame q)

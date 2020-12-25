@@ -21,7 +21,7 @@ import Text.Printf
 import Thock
 import UI.Attributes
 
-titleWidget :: Widget ()
+titleWidget :: Widget n
 titleWidget =
   C.center
     . withAttr titleAttr
@@ -29,7 +29,7 @@ titleWidget =
   where
     logo = foldl' (<=>) emptyWidget . map txt . T.lines $ decodeUtf8 $(embedFile "resources/logo.txt")
 
-listDrawElement :: Bool -> T.Text -> Widget ()
+listDrawElement :: Bool -> T.Text -> Widget n
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
   where
     symbol =
@@ -37,10 +37,10 @@ listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
         then "* "
         else "  "
 
-drawPractice :: Game -> [Widget ()]
+drawPractice :: Game -> [Widget ResourceName]
 drawPractice g = [drawFinished g, drawProgressBarGame g <=> drawPrompt g <=> drawInput g]
 
-drawFinished :: Game -> Widget ()
+drawFinished :: Game -> Widget ResourceName
 drawFinished g = if isDone g then doneWidget else emptyWidget
   where
     doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
@@ -51,26 +51,26 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
     sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
     instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
 
-drawProgressBarGame :: Game -> Widget ()
+drawProgressBarGame :: Game -> Widget ResourceName
 drawProgressBarGame g = drawProgressBar (progress g) (calculateWpm g)
 
-drawProgressBar :: Float -> Double -> Widget ()
+drawProgressBar :: Float -> Double -> Widget ResourceName
 drawProgressBar decimalDone wpm = progressWidget <+> wpmWidget
   where
     progressWidget = addBorder "progress" (P.progressBar (Just percentStr) decimalDone)
     percentStr = roundToStr 1 (decimalDone * 100) ++ "%"
     wpmWidget = addBorder "" (drawWpm wpm)
 
-drawWpm :: Double -> Widget ()
+drawWpm :: Double -> Widget ResourceName
 drawWpm = drawFloatWithSuffix 0 " WPM"
 
-drawFloatWithSuffix :: (PrintfArg a, Floating a) => Int -> String -> a -> Widget ()
+drawFloatWithSuffix :: (PrintfArg a, Floating a) => Int -> String -> a -> Widget ResourceName
 drawFloatWithSuffix n s = str . (++ s) . roundToStr n
 
 roundToStr :: (PrintfArg a, Floating a) => Int -> a -> String
 roundToStr = printf "%0.*f"
 
-drawPrompt :: Game -> Widget ()
+drawPrompt :: Game -> Widget ResourceName
 drawPrompt g = addBorder "prompt" (C.center $ hLimitPercent 80 textWidget)
   where
     textWidget = Widget Fixed Fixed $ do
@@ -97,20 +97,20 @@ lineLengths g lim =
           lenSpace = if null ts then 0 else 1
    in go (T.words $ g ^. (quote . text)) 0
 
-drawTextBlock :: [Widget ()] -> [Int] -> Widget ()
+drawTextBlock :: [Widget ResourceName] -> [Int] -> Widget ResourceName
 drawTextBlock ws ls
   | null ws || null ls = emptyWidget
   | otherwise = foldl1 (<+>) row <=> drawTextBlock rest (tail ls)
   where
     (row, rest) = splitAt (head ls) ws
 
-drawInput :: Game -> Widget ()
+drawInput :: Game -> Widget ResourceName
 drawInput g = addBorder "input" (E.renderEditor (txt . T.unlines) True (g ^. input))
 
-addBorder :: T.Text -> Widget () -> Widget ()
+addBorder :: T.Text -> Widget ResourceName -> Widget ResourceName
 addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
 
-updateGame :: Game -> Event -> EventM () Game
+updateGame :: Game -> Event -> EventM ResourceName Game
 updateGame g ev = do
   gEdited <- handleEventLensed g input E.handleEditorEvent ev
   currentTime <- liftIO getCurrentTime
