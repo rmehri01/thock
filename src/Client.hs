@@ -15,13 +15,12 @@ import Lens.Micro
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
 import Online
-import Quotes
 import Thock
 import UI.Online
 
 --------------------------------------------------------------------------------
-app :: WS.ClientApp ()
-app conn = do
+createApp :: Bool -> RoomFormData -> WS.ClientApp ()
+createApp isCreating (RoomFormData (Username user) room) conn = do
   connChan <- newBChan 10
 
   -- Fork a thread that writes the connection to the custom event
@@ -30,15 +29,17 @@ app conn = do
       cs <- WS.receiveData conn
       writeBChan connChan (ConnectionTick cs)
 
+  -- TODO: cases for creating and use room to communicate with server
+  -- TODO: handle if joining room doesnt exist
+
   q <- WS.receiveData conn -- TODO: handle possibility of failure
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  name <- generateQuote -- TODO: get name from user
-  let o = initialOnline q (name ^. source) conn
-  _ <- WS.sendTextData conn (ClientState {_clientName = name ^. source, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
+  let o = initialOnline q user conn
+  _ <- WS.sendTextData conn (ClientState {_clientName = user, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
   _ <- customMain initialVty buildVty (Just connChan) onlineApp o
   WS.sendClose conn ("Bye!" :: Text)
 
 --------------------------------------------------------------------------------
-runClient :: IO ()
-runClient = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" app
+runClient :: Bool -> RoomFormData -> IO ()
+runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createApp isCreating formData)

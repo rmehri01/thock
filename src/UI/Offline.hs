@@ -7,6 +7,7 @@ import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import Client
 import Control.Monad.IO.Class
+import Crypto
 import qualified Data.Text as T
 import qualified Graphics.Vty as V
 import Lens.Micro
@@ -35,8 +36,8 @@ handleKey :: GameState -> BrickEvent ResourceName () -> EventM ResourceName (Nex
 handleKey gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
   OnlineSelect l -> handleKeyOnlineSelect l ev
-  CreateRoom form -> handleKeyForm CreateRoom undefined form ev
-  JoinRoom form -> handleKeyForm JoinRoom undefined form ev
+  CreateRoom form -> handleKeyForm CreateRoom (\u -> generateRoomId >>= runClient True . RoomFormData u) form ev
+  JoinRoom form -> handleKeyForm JoinRoom (runClient False) form ev
   Practice g -> handleKeyPractice g ev
 
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
