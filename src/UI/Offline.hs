@@ -20,8 +20,8 @@ draw :: GameState -> [Widget ResourceName]
 draw s = case s of
   MainMenu l -> drawList l
   OnlineSelect l -> drawList l
-  CreateRoom form -> drawForm form
-  JoinRoom form -> drawForm form
+  CreateRoomMenu form -> drawForm form
+  JoinRoomMenu form -> drawForm form
   Practice g -> drawPractice g
 
 drawList :: MenuList -> [Widget ResourceName]
@@ -36,8 +36,8 @@ handleKey :: GameState -> BrickEvent ResourceName () -> EventM ResourceName (Nex
 handleKey gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
   OnlineSelect l -> handleKeyOnlineSelect l ev
-  CreateRoom form -> handleKeyForm CreateRoom (\u -> generateRoomId >>= runClient True . RoomFormData u) form ev
-  JoinRoom form -> handleKeyForm JoinRoom (runClient False) form ev
+  CreateRoomMenu form -> handleKeyForm CreateRoomMenu (\u -> generateRoomId >>= runClient True . RoomFormData u) form ev
+  JoinRoomMenu form -> handleKeyForm JoinRoomMenu (runClient False) form ev
   Practice g -> handleKeyPractice g ev
 
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
@@ -58,8 +58,8 @@ handleKeyOnlineSelect l (VtyEvent e) = case e of
     | Just i <- L.listSelected l ->
       M.continue
         ( if i == 0
-            then CreateRoom (mkCreateRoomForm emptyUsername)
-            else JoinRoom (mkJoinRoomForm emptyRoomFormData)
+            then CreateRoomMenu (mkCreateRoomForm emptyUsername)
+            else JoinRoomMenu (mkJoinRoomForm emptyRoomFormData)
         )
     where
       emptyUsername = Username ""

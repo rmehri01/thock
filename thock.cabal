@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c49f4666c230482cec5daec852af9c0938181c60980d4cecd51fe093ed2ef1fa
+-- hash: 5315b3d7227844f1adcdfb20b196347c8f06d866f66cf54bb0fd8148eb697143
 
 name:           thock
 version:        0.1.0.0
@@ -46,6 +46,7 @@ library
     , base >=4.7 && <5
     , brick
     , bytestring
+    , containers
     , file-embed
     , microlens
     , microlens-th
@@ -74,6 +75,7 @@ executable server
     , base >=4.7 && <5
     , brick
     , bytestring
+    , containers
     , file-embed
     , microlens
     , microlens-th
@@ -103,6 +105,7 @@ executable thock
     , base >=4.7 && <5
     , brick
     , bytestring
+    , containers
     , file-embed
     , microlens
     , microlens-th
@@ -132,6 +135,7 @@ test-suite thock-test
     , base >=4.7 && <5
     , brick
     , bytestring
+    , containers
     , file-embed
     , microlens
     , microlens-th

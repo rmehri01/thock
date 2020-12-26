@@ -1,6 +1,6 @@
 module Crypto where
 
-import qualified Data.Text as T
+import Thock
 
-generateRoomId :: IO T.Text
-generateRoomId = undefined
+generateRoomId :: IO RoomId
+generateRoomId = return "yeet"

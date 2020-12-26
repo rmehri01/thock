@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Thock where
@@ -6,11 +7,13 @@ import Brick.Forms
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Applicative
+import Data.Aeson
 import Data.Function
 import qualified Data.Text as T
 import Data.Text.Zipper
 import Data.Time
 import qualified Data.Vector as Vec
+import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.TH
 import Quotes
@@ -35,23 +38,35 @@ makeLenses ''Game
 type MenuList = L.List ResourceName T.Text
 
 newtype Username = Username {_value :: T.Text}
+  deriving (Generic)
 
 makeLenses ''Username
 
+instance FromJSON Username
+
+instance ToJSON Username
+
+type RoomId = T.Text
+
 data RoomFormData = RoomFormData
   { _username :: Username,
-    _roomId :: T.Text
+    _roomId :: RoomId
   }
+  deriving (Generic)
 
 makeLenses ''RoomFormData
+
+instance FromJSON RoomFormData
+
+instance ToJSON RoomFormData
 
 type RoomForm a = Form a () ResourceName
 
 data GameState
   = MainMenu MenuList
   | OnlineSelect MenuList
-  | CreateRoom (RoomForm Username)
-  | JoinRoom (RoomForm RoomFormData)
+  | CreateRoomMenu (RoomForm Username)
+  | JoinRoomMenu (RoomForm RoomFormData)
   | Practice Game
 
 makeLenses ''GameState
