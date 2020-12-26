@@ -6,11 +6,12 @@ import Control.Monad.IO.Class
 import Data.Foldable
 import qualified Graphics.Vty as V
 import Lens.Micro
-import qualified Network.WebSockets as WS
 import Online
 import Thock
 import UI.Attributes
 import UI.Common
+import Data.Aeson
+import Data.Maybe
 
 onlineApp :: M.App Online ConnectionTick ResourceName
 onlineApp =
@@ -28,8 +29,8 @@ drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> 
     g = o ^. localGame
 
 handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
-handleKeyOnline o (AppEvent (ConnectionTick (Update csReceived))) = do
-  M.continue (o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) csReceived)
+handleKeyOnline o (AppEvent (ConnectionTick csReceived)) = do
+  M.continue (o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) (fromJust $ decode csReceived))
 handleKeyOnline o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt o
@@ -41,6 +42,6 @@ handleKeyOnline o (VtyEvent ev) =
         then M.continue o'
         else do
           updatedGame <- updateGame (o' ^. localGame) ev
-          _ <- liftIO $ WS.sendTextData (o ^. onlineConnection) (ClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
+          _ <- liftIO $ sendJsonData (o ^. onlineConnection) (ClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
           M.continue (o' & localGame .~ updatedGame)
 handleKeyOnline o _ = M.continue o

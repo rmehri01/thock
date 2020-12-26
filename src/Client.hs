@@ -7,7 +7,7 @@ where
 --------------------------------------------------------------------------------
 import Brick
 import Brick.BChan
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkFinally)
 import Control.Monad (forever)
 import Data.Text (Text)
 import qualified Graphics.Vty as V
@@ -23,20 +23,23 @@ createApp :: Bool -> RoomFormData -> WS.ClientApp ()
 createApp isCreating (RoomFormData (Username user) room) conn = do
   connChan <- newBChan 10
 
-  -- Fork a thread that writes the connection to the custom event
-  _ <- forkIO $
-    forever $ do
-      cs <- WS.receiveData conn
-      writeBChan connChan (ConnectionTick cs)
+  -- fork a thread that writes custom events when received from server
+  _ <-
+    forkFinally
+      ( forever $ do
+          cs <- WS.receiveData conn
+          writeBChan connChan (ConnectionTick cs)
+      )
+      (const $ return ()) -- terminate when connection is closed and ignore any exceptions
 
   -- TODO: cases for creating and use room to communicate with server
   -- TODO: handle if joining room doesnt exist
 
-  q <- WS.receiveData conn -- TODO: handle possibility of failure
+  q <- receiveJsonData conn -- TODO: handle possibility of failure
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
   let o = initialOnline q user conn
-  _ <- WS.sendTextData conn (ClientState {_clientName = user, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
+  _ <- sendJsonData conn (ClientState {_clientName = user, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
   _ <- customMain initialVty buildVty (Just connChan) onlineApp o
   WS.sendClose conn ("Bye!" :: Text)
 

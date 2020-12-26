@@ -9,7 +9,6 @@ import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
 import Lens.Micro.TH
-import qualified Network.WebSockets as WS
 import System.Random
 
 data Quote = Quote
@@ -20,13 +19,6 @@ data Quote = Quote
   deriving (Generic)
 
 makeLenses ''Quote
-
-instance WS.WebSocketsData Quote where
-  fromDataMessage d = case d of
-    WS.Text b _ -> fromJust $ decode b -- TODO use mt
-    WS.Binary b -> fromJust $ decode b
-  fromLazyByteString = fromJust . decode -- TODO: sus
-  toLazyByteString = encode
 
 instance FromJSON Quote where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}

@@ -13,6 +13,7 @@ import Control.Concurrent
 import Control.Exception (finally)
 import Control.Monad (forM_, forever)
 import Data.Aeson
+import Data.ByteString.Lazy (ByteString)
 import Data.Function
 import Data.Maybe
 import qualified Data.Text as T
@@ -22,22 +23,6 @@ import Lens.Micro.TH
 import qualified Network.WebSockets as WS
 import Quotes
 import Thock
-
-data PlayerStatusMessage
-  = Add
-  | Update [ClientState]
-  deriving (Generic)
-
-instance FromJSON PlayerStatusMessage
-
-instance ToJSON PlayerStatusMessage
-
-instance WS.WebSocketsData PlayerStatusMessage where
-  fromDataMessage d = case d of
-    WS.Text b _ -> fromJust $ decode b -- TODO use mt
-    WS.Binary b -> fromJust $ decode b
-  fromLazyByteString = fromJust . decode -- TODO: sus
-  toLazyByteString = encode
 
 data ClientState = ClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
   deriving (Generic)
@@ -50,13 +35,6 @@ instance FromJSON ClientState where
 instance ToJSON ClientState where
   toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
 
-instance WS.WebSocketsData ClientState where
-  fromDataMessage d = case d of
-    WS.Text b _ -> fromJust $ decode b -- TODO use mt
-    WS.Binary b -> fromJust $ decode b
-  fromLazyByteString = fromJust . decode -- TODO: sus
-  toLazyByteString = encode
-
 data Client = Client {_state :: ClientState, _connection :: WS.Connection}
 
 makeLenses ''Client
@@ -66,7 +44,7 @@ data ServerState = ServerState {_serverQuote :: Quote, _clients :: [Client]}
 
 makeLenses ''ServerState
 
-newtype ConnectionTick = ConnectionTick PlayerStatusMessage
+newtype ConnectionTick = ConnectionTick ByteString
 
 data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [ClientState]}
 
@@ -103,8 +81,8 @@ application :: MVar ServerState -> WS.ServerApp
 application mState pending = do
   conn <- WS.acceptRequest pending
   WS.withPingThread conn 30 (return ()) $ do
-    _ <- readMVar mState >>= (\s -> WS.sendTextData conn (s ^. serverQuote))
-    cs <- WS.receiveData conn
+    _ <- readMVar mState >>= (\s -> sendJsonData conn (s ^. serverQuote))
+    cs <- receiveJsonData conn
     -- ss <- readMVar state
     case cs of
       _
@@ -124,13 +102,13 @@ application mState pending = do
 
 talk :: WS.Connection -> MVar ServerState -> IO ()
 talk conn mState = forever $ do
-  c <- WS.receiveData conn
+  c <- receiveJsonData conn
   s <- modifyMVar mState $ \s ->
     let s' = updateClient c s in return (s', s')
   broadcast s
 
 broadcast :: ServerState -> IO ()
-broadcast ss = forM_ cs $ \(Client _ conn) -> WS.sendTextData conn (Update $ map (^. state) cs)
+broadcast ss = forM_ cs $ \(Client _ conn) -> sendJsonData conn (map (^. state) cs)
   where
     cs = ss ^. clients
 
@@ -151,3 +129,8 @@ broadcast ss = forM_ cs $ \(Client _ conn) -> WS.sendTextData conn (Update $ map
 -- TODO: third case, already exists validation
 -- | clientExists client cs ->
 --   WS.sendTextData conn ("User already exists" :: Text)
+sendJsonData :: ToJSON a => WS.Connection -> a -> IO ()
+sendJsonData conn a = WS.sendTextData conn (encode a)
+
+receiveJsonData :: FromJSON a => WS.Connection -> IO a
+receiveJsonData conn = fromMaybe (error "could not decode JSON message into desired type") . decode <$> WS.receiveData conn
