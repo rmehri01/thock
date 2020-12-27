@@ -8,10 +8,13 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
+import Lens.Micro
 import Lens.Micro.TH
 import qualified Network.WebSockets as WS
 import Quotes
 import Thock
+
+-- TODO: different module?
 
 data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: Bool}
   deriving (Generic)
@@ -19,7 +22,7 @@ data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: B
 makeLenses ''RoomClientState
 
 instance FromJSON RoomClientState where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1} -- TODO: field modifiers might not be needed
 
 instance ToJSON RoomClientState where
   toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
@@ -63,3 +66,6 @@ sendJsonData conn a = WS.sendTextData conn (encode a)
 
 receiveJsonData :: FromJSON a => WS.Connection -> IO a
 receiveJsonData conn = fromMaybe (error "could not decode JSON message into desired type") . decode <$> WS.receiveData conn
+
+canStart :: [RoomClientState] -> Bool
+canStart rs = length rs > 1 && all (^. isReady) rs

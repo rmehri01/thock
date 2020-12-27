@@ -61,9 +61,12 @@ handleKeyOnlineState s ev = case s of
   WaitingRoom room localSt conn ps -> handleKeyWaitingRoom room localSt conn ps ev
   OnlineGame o -> handleKeyOnline o ev
 
+-- TODO: pass all arguments in together or separate?
 handleKeyWaitingRoom :: RoomId -> RoomClientState -> WS.Connection -> [RoomClientState] -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
 handleKeyWaitingRoom room localSt conn _ (AppEvent (ConnectionTick csReceived)) =
-  M.continue (WaitingRoom room localSt conn (fromJust $ decode csReceived))
+  case decode csReceived of
+    Just (q, gs) -> M.continue (OnlineGame (Online {_localGame = initializeGame q, _onlineName = localSt ^. clientUsername, _onlineConnection = conn, _clientStates = gs})) -- TODO: use initial online
+    Nothing -> M.continue (WaitingRoom room localSt conn (fromJust $ decode csReceived))
 handleKeyWaitingRoom room localSt conn ps (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (WaitingRoom room localSt conn ps)

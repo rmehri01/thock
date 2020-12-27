@@ -24,7 +24,7 @@ import Online
 import Quotes
 import Thock
 
-data ServerState = ServerState {_serverQuote :: Quote, _rooms :: Map RoomId [RoomClient], _activeGames :: Map RoomId [GameClient]} -- TODO: rooms that are started and not yet?
+data ServerState = ServerState {_serverQuote :: Quote, _rooms :: Map RoomId [RoomClient], _activeGames :: Map RoomId [GameClient]}
   deriving (Generic)
 
 makeLenses ''ServerState
@@ -43,18 +43,26 @@ newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty, _activeGam
 -- clientExists client ss = undefined
 --   -- any (((/=) `on` (^. (state . clientName))) client) (ss ^. clients)
 
-addClient :: RoomId -> RoomClient -> ServerState -> ServerState
-addClient room client ss = ss & rooms %~ Map.adjust (client :) room
+addRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
+addRoomClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
-removeClient :: RoomId -> RoomClient -> ServerState -> ServerState
-removeClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (roomState . clientUsername)) client) room
+removeRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
+removeRoomClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (roomState . clientUsername)) client) room
 
-updateClient :: RoomId -> RoomClientState -> ServerState -> ServerState
-updateClient room client ss = ss & rooms %~ Map.adjust (map updateIfClient) room
+updateRoomClient :: RoomId -> RoomClientState -> ServerState -> ServerState
+updateRoomClient room client ss = ss & rooms %~ Map.adjust (map updateIfClient) room
   where
     updateIfClient other =
       if other ^. (roomState . clientUsername) == client ^. clientUsername
         then other & roomState .~ client
+        else other
+
+updateGameClient :: RoomId -> GameClientState -> ServerState -> ServerState
+updateGameClient room client ss = ss & activeGames %~ Map.adjust (map updateIfClient) room
+  where
+    updateIfClient other =
+      if other ^. (state . clientName) == client ^. clientName
+        then other & state .~ client
         else other
 
 createRoom :: RoomId -> RoomClient -> ServerState -> ServerState
@@ -74,10 +82,10 @@ application mState pending = do
     -- _ <- readMVar mState >>= (\s -> sendJsonData conn (s ^. serverQuote))
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
     let client = RoomClient (RoomClientState user False) conn
-        disconnect = do
+        disconnect = do -- TODO: disconnect from room and game separate?
           -- Remove client and return new state
           s <- modifyMVar mState $ \s ->
-            let s' = removeClient room client s in return (s', s')
+            let s' = removeRoomClient room client s in return (s', s')
           roomBroadcastExceptSending room user s
     flip finally disconnect $ do
       if isCreating
@@ -90,19 +98,53 @@ application mState pending = do
           if Map.member room (ss ^. rooms)
             then do
               modifyMVar_ mState $ \s -> do
-                let s' = addClient room client s
+                let s' = addRoomClient room client s
                 sendJsonData conn (Just (clientStatesExceptSelf (client ^. roomState) ((s' ^. rooms) Map.! room)))
                 roomBroadcastExceptSending room user s'
                 return s'
               roomTalk conn mState room
             else sendJsonData conn (Nothing :: Maybe [RoomClientState])
+      gameTalk conn mState room
 
-roomTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
-roomTalk conn mState room = forever $ do
+gameTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
+gameTalk conn mState room = forever $ do
   c <- receiveJsonData conn
   s <- modifyMVar mState $ \s ->
-    let s' = updateClient room c s in return (s', s')
-  roomBroadcastExceptSending room (c ^. clientUsername) s
+    let s' = updateGameClient room c s in return (s', s')
+  gameBroadcastExceptSending room (c ^. clientName) s
+
+gameBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO () -- TODO: abstract
+gameBroadcastExceptSending room sending ss =
+  forM_
+    csFiltered
+    $ \(GameClient gs conn) -> sendJsonData conn (deleteFirstEqualOn (^. clientName) gs $ map (^. state) cs) -- TODO: generalize
+  where
+    csFiltered = deleteFirstWhere (\c -> (c ^. (state . clientName)) == sending) cs
+    cs = (ss ^. activeGames) Map.! room
+
+roomTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
+roomTalk conn mState room = do
+  c <- receiveJsonData conn
+  s <- modifyMVar mState $ \s ->
+    let s' = updateRoomClient room c s in return (s', s')
+  if canStart (map (^. roomState) $ (s ^. rooms) Map.! room)
+    then do
+      newS <- modifyMVar mState $ \s' -> do
+        let s'' = makeActive room s' in return (s'', s'')
+      forM_
+        ((newS ^. activeGames) Map.! room)
+        $ \(GameClient gs conn') -> sendJsonData conn' (newS ^. serverQuote, deleteFirstEqualOn (^. clientName) gs $ map (^. state) ((newS ^. activeGames) Map.! room)) -- TODO: abstract broadcast
+    else do
+      roomBroadcastExceptSending room (c ^. clientUsername) s
+      roomTalk conn mState room
+
+makeActive :: RoomId -> ServerState -> ServerState
+makeActive room ss =
+  ss & rooms %~ Map.delete room
+    & activeGames %~ Map.insert room clients
+  where
+    clients = map (\(RoomClient (RoomClientState user _) conn) -> GameClient (GameClientState user 0 0) conn) states
+    states = (ss ^. rooms) Map.! room
 
 -- cs <- receiveJsonData conn
 -- -- ss <- readMVar state
@@ -110,7 +152,7 @@ roomTalk conn mState room = forever $ do
 --   _
 --     | otherwise -> flip finally disconnect $ do
 --       modifyMVar_ mState $ \s -> do
---         let s' = addClient client s
+--         let s' = addRoomClient client s
 --         broadcast s'
 --         return s'
 --       talk conn mState
@@ -119,14 +161,14 @@ roomTalk conn mState room = forever $ do
 --       disconnect = do
 --         -- Remove client and return new state
 --         s <- modifyMVar mState $ \s ->
---           let s' = removeClient client s in return (s', s')
+--           let s' = removeRoomClient client s in return (s', s')
 --         broadcast s
 
 -- talk :: WS.Connection -> MVar ServerState -> IO ()
 -- talk conn mState = forever $ do
 --   c <- receiveJsonData conn
 --   s <- modifyMVar mState $ \s ->
---     let s' = updateClient c s in return (s', s')
+--     let s' = updateRoomClient c s in return (s', s')
 --   broadcast s
 
 roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
