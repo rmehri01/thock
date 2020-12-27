@@ -7,7 +7,6 @@ import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import Client
 import Control.Monad.IO.Class
-import Crypto
 import qualified Data.Text as T
 import qualified Graphics.Vty as V
 import Lens.Micro

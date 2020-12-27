@@ -8,6 +8,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Applicative
 import Data.Aeson
+import Data.Char
 import Data.Function
 import qualified Data.Text as T
 import Data.Text.Zipper
@@ -17,6 +18,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.TH
 import Quotes
+import System.Random
 
 data ResourceName
   = UsernameField
@@ -154,3 +156,6 @@ onlineSelectState = OnlineSelect (L.list Ordinary (Vec.fromList ["Create room", 
 
 startPracticeGame :: Quote -> GameState
 startPracticeGame q = Practice (initializeGame q)
+
+generateRoomId :: IO RoomId
+generateRoomId = T.pack . take 10 . filter (\c -> isAscii c && isAlphaNum c) . randoms <$> getStdGen
