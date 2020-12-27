@@ -13,29 +13,44 @@ import qualified Network.WebSockets as WS
 import Quotes
 import Thock
 
-data ClientState = ClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
+data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: Bool}
   deriving (Generic)
 
-makeLenses ''ClientState
+makeLenses ''RoomClientState
 
-instance FromJSON ClientState where
+instance FromJSON RoomClientState where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
 
-instance ToJSON ClientState where
+instance ToJSON RoomClientState where
   toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
 
-data Client = Client {_state :: ClientState, _connection :: WS.Connection}
+data GameClientState = GameClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
+  deriving (Generic)
 
-makeLenses ''Client
+makeLenses ''GameClientState
+
+instance FromJSON GameClientState where
+  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+
+instance ToJSON GameClientState where
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
+
+data RoomClient = RoomClient {_roomState :: RoomClientState, _roomConnection :: WS.Connection}
+
+makeLenses ''RoomClient
+
+data GameClient = GameClient {_state :: GameClientState, _connection :: WS.Connection}
+
+makeLenses ''GameClient
 
 newtype ConnectionTick = ConnectionTick ByteString
 
-data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [ClientState]}
+data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [GameClientState]}
 
 makeLenses ''Online
 
 data OnlineGameState
-  = WaitingRoom {_roomId :: RoomId, _players :: [T.Text]}
+  = WaitingRoom {_roomId :: RoomId, _localState :: RoomClientState, _waitingRoomConnection :: WS.Connection,  _otherPlayers :: [RoomClientState]}
   | OnlineGame Online
 
 makeLenses ''OnlineGameState

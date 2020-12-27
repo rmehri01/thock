@@ -22,9 +22,8 @@ import qualified Network.WebSockets as WS
 import Online
 import Quotes
 import Thock
-import GHC.Conc (yield)
 
-data ServerState = ServerState {_serverQuote :: Quote, _rooms :: Map RoomId [Client]} -- TODO: rooms that are started and not yet?
+data ServerState = ServerState {_serverQuote :: Quote, _rooms :: Map RoomId [RoomClient], _activeGames :: Map RoomId [GameClient]} -- TODO: rooms that are started and not yet?
   deriving (Generic)
 
 makeLenses ''ServerState
@@ -33,7 +32,7 @@ main :: IO ()
 main = runServer
 
 newServerState :: Quote -> ServerState
-newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty}
+newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty, _activeGames = Map.empty}
 
 -- numClients :: ServerState -> Int
 -- numClients ss = undefined
@@ -43,17 +42,17 @@ newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty}
 -- clientExists client ss = undefined
 --   -- any (((/=) `on` (^. (state . clientName))) client) (ss ^. clients)
 
-addClient :: RoomId -> Client -> ServerState -> ServerState
+addClient :: RoomId -> RoomClient -> ServerState -> ServerState
 addClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
-removeClient :: Client -> RoomId -> ServerState -> ServerState
-removeClient client room ss = ss & rooms %~ Map.adjust (filter (((/=) `on` (^. (state . clientName))) client)) room
+removeClient :: RoomId -> RoomClient -> ServerState -> ServerState
+removeClient room client ss = ss & rooms %~ Map.adjust (filter (((/=) `on` (^. (roomState . clientUsername))) client)) room
 
--- updateClient :: ClientState -> ServerState -> ServerState
--- updateClient cs ss = undefined
---   -- ss & rooms %~ map (\c -> if c ^. (state . clientName) == cs ^. clientName then c & state .~ cs else c)
+updateClient :: RoomId -> RoomClientState -> ServerState -> ServerState
+updateClient room client ss =
+  ss & rooms %~ Map.adjust (map (\c -> if c ^. (roomState . clientUsername) == client ^. clientUsername then c & roomState .~ client else c)) room
 
-createRoom :: RoomId -> Client -> ServerState -> ServerState
+createRoom :: RoomId -> RoomClient -> ServerState -> ServerState
 createRoom room client ss = ss & rooms %~ Map.insert room [client]
 
 runServer :: IO ()
@@ -69,33 +68,36 @@ application mState pending = do
     -- TODO: probably want to break into room and game parts
     -- _ <- readMVar mState >>= (\s -> sendJsonData conn (s ^. serverQuote))
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
-    let client = Client (ClientState user 0 0) conn
+    let client = RoomClient (RoomClientState user False) conn
         disconnect = do
           -- Remove client and return new state
           s <- modifyMVar mState $ \s ->
-            let s' = removeClient client room s in return (s', s')
-          broadcast room s
+            let s' = removeClient room client s in return (s', s')
+          roomBroadcast room s
     flip finally disconnect $ do
       if isCreating
         then do
           modifyMVar_ mState $ \s ->
             return $ createRoom room client s
-          talk conn mState room
+          roomTalk conn mState room
         else do
           ss <- readMVar mState
           if Map.member room (ss ^. rooms)
             then do
               modifyMVar_ mState $ \s -> do
                 let s' = addClient room client s
-                sendJsonData conn (Just (map (^. state) ((s' ^. rooms) Map.! room))) -- TODO: dont want to send both
-                broadcast room s'
+                sendJsonData conn (Just (map (^. roomState) ((s' ^. rooms) Map.! room))) -- TODO: dont want to send both
+                roomBroadcast room s'
                 return s'
-              talk conn mState room
-            else sendJsonData conn (Nothing :: Maybe [ClientState])
+              roomTalk conn mState room
+            else sendJsonData conn (Nothing :: Maybe [RoomClientState])
 
-talk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
-talk _ _ _ = forever $ do
-  yield
+roomTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
+roomTalk conn mState room = forever $ do
+  c <- receiveJsonData conn
+  s <- modifyMVar mState $ \s ->
+    let s' = updateClient room c s in return (s', s')
+  roomBroadcast room s
 
 -- cs <- receiveJsonData conn
 -- -- ss <- readMVar state
@@ -122,8 +124,8 @@ talk _ _ _ = forever $ do
 --     let s' = updateClient c s in return (s', s')
 --   broadcast s
 
-broadcast :: RoomId -> ServerState -> IO ()
-broadcast room ss = forM_ cs $ \(Client _ conn) -> sendJsonData conn (map (^. (state . clientName)) cs)
+roomBroadcast :: RoomId -> ServerState -> IO ()
+roomBroadcast room ss = forM_ cs $ \(RoomClient _ conn) -> sendJsonData conn (map (^. roomState) cs)
   where
     cs = (ss ^. rooms) Map.! room
 
