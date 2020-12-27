@@ -82,7 +82,8 @@ application mState pending = do
     -- _ <- readMVar mState >>= (\s -> sendJsonData conn (s ^. serverQuote))
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
     let client = RoomClient (RoomClientState user False) conn
-        disconnect = do -- TODO: disconnect from room and game separate?
+        disconnect = do
+          -- TODO: disconnect from room and game separate?
           -- Remove client and return new state
           s <- modifyMVar mState $ \s ->
             let s' = removeRoomClient room client s in return (s', s')
@@ -92,7 +93,7 @@ application mState pending = do
         then do
           modifyMVar_ mState $ \s ->
             return $ createRoom room client s
-          roomTalk conn mState room
+          talk conn mState room
         else do
           ss <- readMVar mState
           if Map.member room (ss ^. rooms)
@@ -102,41 +103,39 @@ application mState pending = do
                 sendJsonData conn (Just (clientStatesExceptSelf (client ^. roomState) ((s' ^. rooms) Map.! room)))
                 roomBroadcastExceptSending room user s'
                 return s'
-              roomTalk conn mState room
+              talk conn mState room
             else sendJsonData conn (Nothing :: Maybe [RoomClientState])
-      gameTalk conn mState room
 
-gameTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
-gameTalk conn mState room = forever $ do
-  c <- receiveJsonData conn
-  s <- modifyMVar mState $ \s ->
-    let s' = updateGameClient room c s in return (s', s')
-  gameBroadcastExceptSending room (c ^. clientName) s
+talk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
+talk conn mState room = forever $ do
+  cMessage <- receiveJsonData conn
+  case cMessage of
+    RoomClientUpdate r -> do
+      -- TODO: abstract
+      s <- modifyMVar mState $ \s ->
+        let s' = updateRoomClient room r s in return (s', s')
+      if canStart (map (^. roomState) $ (s ^. rooms) Map.! room)
+        then do
+          newS <- modifyMVar mState $ \s' -> do
+            let s'' = makeActive room s' in return (s'', s'')
+          forM_
+            ((newS ^. activeGames) Map.! room)
+            $ \(GameClient gs conn') -> sendJsonData conn' (StartGame (newS ^. serverQuote) (deleteFirstEqualOn (^. clientName) gs $ map (^. state) ((newS ^. activeGames) Map.! room))) -- TODO: abstract broadcast
+        else do
+          roomBroadcastExceptSending room (r ^. clientUsername) s
+    GameClientUpdate g -> do
+      s <- modifyMVar mState $ \s ->
+        let s' = updateGameClient room g s in return (s', s')
+      gameBroadcastExceptSending room (g ^. clientName) s
 
 gameBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO () -- TODO: abstract
 gameBroadcastExceptSending room sending ss =
   forM_
     csFiltered
-    $ \(GameClient gs conn) -> sendJsonData conn (deleteFirstEqualOn (^. clientName) gs $ map (^. state) cs) -- TODO: generalize
+    $ \(GameClient gs conn) -> sendJsonData conn (GameUpdate $ deleteFirstEqualOn (^. clientName) gs $ map (^. state) cs) -- TODO: generalize
   where
     csFiltered = deleteFirstWhere (\c -> (c ^. (state . clientName)) == sending) cs
     cs = (ss ^. activeGames) Map.! room
-
-roomTalk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
-roomTalk conn mState room = do
-  c <- receiveJsonData conn
-  s <- modifyMVar mState $ \s ->
-    let s' = updateRoomClient room c s in return (s', s')
-  if canStart (map (^. roomState) $ (s ^. rooms) Map.! room)
-    then do
-      newS <- modifyMVar mState $ \s' -> do
-        let s'' = makeActive room s' in return (s'', s'')
-      forM_
-        ((newS ^. activeGames) Map.! room)
-        $ \(GameClient gs conn') -> sendJsonData conn' (newS ^. serverQuote, deleteFirstEqualOn (^. clientName) gs $ map (^. state) ((newS ^. activeGames) Map.! room)) -- TODO: abstract broadcast
-    else do
-      roomBroadcastExceptSending room (c ^. clientUsername) s
-      roomTalk conn mState room
 
 makeActive :: RoomId -> ServerState -> ServerState
 makeActive room ss =
@@ -175,7 +174,7 @@ roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
 roomBroadcastExceptSending room sending ss =
   forM_
     csFiltered
-    $ \(RoomClient rs conn) -> sendJsonData conn (clientStatesExceptSelf rs cs)
+    $ \(RoomClient rs conn) -> sendJsonData conn (RoomUpdate $ clientStatesExceptSelf rs cs)
   where
     csFiltered = deleteFirstWhere (\c -> (c ^. (roomState . clientUsername)) == sending) cs
     cs = (ss ^. rooms) Map.! room

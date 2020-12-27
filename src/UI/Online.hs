@@ -4,9 +4,7 @@ import Brick
 import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
 import Control.Monad.IO.Class
-import Data.Aeson
 import Data.Foldable
-import Data.Maybe
 import qualified Graphics.Vty as V
 import Lens.Micro
 import qualified Network.WebSockets as WS
@@ -64,22 +62,23 @@ handleKeyOnlineState s ev = case s of
 -- TODO: pass all arguments in together or separate?
 handleKeyWaitingRoom :: RoomId -> RoomClientState -> WS.Connection -> [RoomClientState] -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
 handleKeyWaitingRoom room localSt conn _ (AppEvent (ConnectionTick csReceived)) =
-  case decode csReceived of
-    Just (q, gs) -> M.continue (OnlineGame (Online {_localGame = initializeGame q, _onlineName = localSt ^. clientUsername, _onlineConnection = conn, _clientStates = gs})) -- TODO: use initial online
-    Nothing -> M.continue (WaitingRoom room localSt conn (fromJust $ decode csReceived))
+  case csReceived of
+    RoomUpdate rs -> M.continue (WaitingRoom room localSt conn rs)
+    StartGame q gs -> M.continue (OnlineGame (Online {_localGame = initializeGame q, _onlineName = localSt ^. clientUsername, _onlineConnection = conn, _clientStates = gs})) -- TODO: use initial online
+    _ -> error "undefined behaviour"
 handleKeyWaitingRoom room localSt conn ps (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (WaitingRoom room localSt conn ps)
     V.EvKey (V.KChar 'r') [] -> do
       let newSt = localSt & isReady %~ not
-      liftIO (sendJsonData conn newSt)
+      liftIO (sendJsonData conn (RoomClientUpdate newSt))
       M.continue (WaitingRoom room newSt conn ps)
     _ -> M.continue (WaitingRoom room localSt conn ps)
 handleKeyWaitingRoom room localSt conn ps _ = M.continue (WaitingRoom room localSt conn ps)
 
 handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
-handleKeyOnline o (AppEvent (ConnectionTick csReceived)) = do
-  M.continue (OnlineGame $ o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) (fromJust $ decode csReceived))
+handleKeyOnline o (AppEvent (ConnectionTick (GameUpdate csReceived))) = do
+  M.continue (OnlineGame $ o & clientStates .~ filter (\cs -> cs ^. clientName /= o ^. onlineName) csReceived)
 handleKeyOnline o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (OnlineGame o)
@@ -91,6 +90,6 @@ handleKeyOnline o (VtyEvent ev) =
         then M.continue (OnlineGame o')
         else do
           updatedGame <- updateGame (o' ^. localGame) ev
-          _ <- liftIO $ sendJsonData (o ^. onlineConnection) (GameClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
+          _ <- liftIO $ sendJsonData (o ^. onlineConnection) (GameClientUpdate $ GameClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
           M.continue (OnlineGame $ o' & localGame .~ updatedGame)
 handleKeyOnline o _ = M.continue (OnlineGame o)

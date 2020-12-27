@@ -4,7 +4,6 @@
 module Online where
 
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
 import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
@@ -46,7 +45,27 @@ data GameClient = GameClient {_state :: GameClientState, _connection :: WS.Conne
 
 makeLenses ''GameClient
 
-newtype ConnectionTick = ConnectionTick ByteString
+data ClientToServerMessage
+  = RoomClientUpdate RoomClientState
+  | GameClientUpdate GameClientState
+  deriving (Generic)
+
+instance FromJSON ClientToServerMessage
+
+instance ToJSON ClientToServerMessage
+
+data ServerToClientMessage
+  = RoomUpdate [RoomClientState]
+  | -- | JoinRoomConfirmation (Maybe [RoomClientState])
+    GameUpdate [GameClientState]
+  | StartGame Quote [GameClientState]
+  deriving (Generic)
+
+instance FromJSON ServerToClientMessage
+
+instance ToJSON ServerToClientMessage
+
+newtype ConnectionTick = ConnectionTick ServerToClientMessage
 
 data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [GameClientState]}
 

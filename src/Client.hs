@@ -34,7 +34,7 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
         _ <-
           forkFinally
             ( forever $ do
-                cs <- WS.receiveData conn
+                cs <- receiveJsonData conn
                 writeBChan connChan (ConnectionTick cs)
             )
             (const $ return ()) -- terminate when connection is closed and ignore any exceptions
