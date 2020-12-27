@@ -50,7 +50,7 @@ data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnecti
 makeLenses ''Online
 
 data OnlineGameState
-  = WaitingRoom {_roomId :: RoomId, _localState :: RoomClientState, _waitingRoomConnection :: WS.Connection,  _otherPlayers :: [RoomClientState]}
+  = WaitingRoom {_roomId :: RoomId, _localState :: RoomClientState, _waitingRoomConnection :: WS.Connection, _otherPlayers :: [RoomClientState]}
   | OnlineGame Online
 
 makeLenses ''OnlineGameState

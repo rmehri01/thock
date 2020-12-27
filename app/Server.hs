@@ -15,6 +15,7 @@ import Control.Monad (forM_, forever)
 import Data.Function
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.TH
@@ -46,11 +47,15 @@ addClient :: RoomId -> RoomClient -> ServerState -> ServerState
 addClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
 removeClient :: RoomId -> RoomClient -> ServerState -> ServerState
-removeClient room client ss = ss & rooms %~ Map.adjust (filter (((/=) `on` (^. (roomState . clientUsername))) client)) room
+removeClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (roomState . clientUsername)) client) room
 
 updateClient :: RoomId -> RoomClientState -> ServerState -> ServerState
-updateClient room client ss =
-  ss & rooms %~ Map.adjust (map (\c -> if c ^. (roomState . clientUsername) == client ^. clientUsername then c & roomState .~ client else c)) room
+updateClient room client ss = ss & rooms %~ Map.adjust (map updateIfClient) room
+  where
+    updateIfClient other =
+      if other ^. (roomState . clientUsername) == client ^. clientUsername
+        then other & roomState .~ client
+        else other
 
 createRoom :: RoomId -> RoomClient -> ServerState -> ServerState
 createRoom room client ss = ss & rooms %~ Map.insert room [client]
@@ -73,7 +78,7 @@ application mState pending = do
           -- Remove client and return new state
           s <- modifyMVar mState $ \s ->
             let s' = removeClient room client s in return (s', s')
-          roomBroadcast room s
+          roomBroadcastExceptSending room user s
     flip finally disconnect $ do
       if isCreating
         then do
@@ -86,8 +91,8 @@ application mState pending = do
             then do
               modifyMVar_ mState $ \s -> do
                 let s' = addClient room client s
-                sendJsonData conn (Just (map (^. roomState) ((s' ^. rooms) Map.! room))) -- TODO: dont want to send both
-                roomBroadcast room s'
+                sendJsonData conn (Just (clientStatesExceptSelf (client ^. roomState) ((s' ^. rooms) Map.! room)))
+                roomBroadcastExceptSending room user s'
                 return s'
               roomTalk conn mState room
             else sendJsonData conn (Nothing :: Maybe [RoomClientState])
@@ -97,7 +102,7 @@ roomTalk conn mState room = forever $ do
   c <- receiveJsonData conn
   s <- modifyMVar mState $ \s ->
     let s' = updateClient room c s in return (s', s')
-  roomBroadcast room s
+  roomBroadcastExceptSending room (c ^. clientUsername) s
 
 -- cs <- receiveJsonData conn
 -- -- ss <- readMVar state
@@ -124,10 +129,17 @@ roomTalk conn mState room = forever $ do
 --     let s' = updateClient c s in return (s', s')
 --   broadcast s
 
-roomBroadcast :: RoomId -> ServerState -> IO ()
-roomBroadcast room ss = forM_ cs $ \(RoomClient _ conn) -> sendJsonData conn (map (^. roomState) cs)
+roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
+roomBroadcastExceptSending room sending ss =
+  forM_
+    csFiltered
+    $ \(RoomClient rs conn) -> sendJsonData conn (clientStatesExceptSelf rs cs)
   where
+    csFiltered = deleteFirstWhere (\c -> (c ^. (roomState . clientUsername)) == sending) cs
     cs = (ss ^. rooms) Map.! room
+
+clientStatesExceptSelf :: RoomClientState -> [RoomClient] -> [RoomClientState]
+clientStatesExceptSelf self = deleteFirstEqualOn (^. clientUsername) self . map (^. roomState)
 
 -- TODO: first case
 
@@ -146,3 +158,9 @@ roomBroadcast room ss = forM_ cs $ \(RoomClient _ conn) -> sendJsonData conn (ma
 -- TODO: third case, already exists validation
 -- | clientExists client cs ->
 --   WS.sendTextData conn ("User already exists" :: Text)
+deleteFirstEqualOn :: Eq b => (a -> b) -> a -> [a] -> [a]
+deleteFirstEqualOn f toDelete = deleteFirstWhere (((==) `on` f) toDelete)
+
+deleteFirstWhere :: (a -> Bool) -> [a] -> [a]
+deleteFirstWhere _ [] = []
+deleteFirstWhere p (a : as) = if p a then as else a : deleteFirstWhere p as
