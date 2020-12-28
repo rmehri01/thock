@@ -31,26 +31,25 @@ drawOnlineState s = case s of
 drawWaitingRoom :: RoomId -> RoomClientState -> [RoomClientState] -> [Widget ResourceName]
 drawWaitingRoom room localSt ps = [roomIdWidget <=> (playersDisplay <+> statusDisplay) <=> helpWidget]
   where
-    roomIdWidget = C.center $ addBorder "room id" (txt room)
-    playersDisplay = C.center $ addBorder "players" (foldr ((\user w -> txt user <=> w) . (^. clientUsername)) emptyWidget (localSt : ps))
+    roomIdWidget = addBorder "room id" $ C.hCenter (txt room)
+    playersDisplay = addBorder "players" $ C.center (foldr ((\user w -> txt user <=> w) . (^. clientUsername)) emptyWidget (localSt : ps))
     statusDisplay =
       -- TODO: extract
-      C.center $
-        addBorder
-          "statuses"
+      addBorder "status" $
+        C.center
           ( foldr
               ( ( \ready w ->
-                    (if ready then withAttr correctAttr (txt "yes") else withAttr incorrectAttr (txt "no")) <=> w
+                    (if ready then withAttr primaryAttr (txt "ready") else withAttr secondaryAttr (txt "not ready")) <=> w
                 )
                   . (^. isReady)
               )
               emptyWidget
               (localSt : ps)
           )
-    helpWidget = addBorder "help" (txt "Press 'r' to ready up! Once everyone is ready, the match will begin.")
+    helpWidget = addBorder "help" $ C.hCenter (txtWrap "Press 'r' to ready up! Once everyone is ready, the match will begin.")
 
 drawOnline :: Online -> [Widget ResourceName]
-drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> drawProgressBar (c ^. clientProgress) (c ^. clientWpm)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
+drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> drawProgressBar (c ^. clientProgress) (c ^. clientWpm) (c ^. clientName)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
   where
     g = o ^. localGame
 

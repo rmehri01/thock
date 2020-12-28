@@ -22,10 +22,7 @@ import Thock
 import UI.Attributes
 
 titleWidget :: Widget n
-titleWidget =
-  C.center
-    . withAttr titleAttr
-    $ logo
+titleWidget = withAttr titleAttr logo
   where
     logo = foldl' (<=>) emptyWidget . map txt . T.lines $ decodeUtf8 $(embedFile "resources/logo.txt")
 
@@ -43,21 +40,22 @@ drawPractice g = [drawFinished g, drawProgressBarGame g <=> drawPrompt g <=> dra
 drawFinished :: Game -> Widget ResourceName
 drawFinished g = if isDone g then doneWidget else emptyWidget
   where
-    doneWidget = C.centerLayer . hLimitPercent 80 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
+    doneWidget = C.centerLayer . hLimitPercent 90 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
     stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
-    speedStat = txt "Speed: " <+> withAttr primaryAttr (drawWpm (calculateWpm g))
-    accuracyStat = txt "Accuracy: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 "%" (accuracy g * 100))
-    timeStat = txt "Time elapsed: " <+> withAttr primaryAttr (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
-    sourceStat = txt "Quote source: " <+> withAttr primaryAttr (txt $ g ^. (quote . source))
-    instructions = C.hCenter (txt "Back to menu: ^b | Retry quote: ^r | Next quote: ^n")
+    speedStat = makeStatWidget "Speed: " (drawWpm (calculateWpm g))
+    accuracyStat = makeStatWidget "Accuracy: " (drawFloatWithSuffix 1 "%" (accuracy g * 100))
+    timeStat = makeStatWidget "Time elapsed: " (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
+    sourceStat = makeStatWidget "Quote source: " (txtWrap $ g ^. (quote . source))
+    instructions = C.hCenter (txt "Back: Esc | Retry: ^r | Next: ^n")
+    makeStatWidget t w = vLimit 1 (hLimit 15 (withAttr secondaryAttr (txt t) <+> fill ' ') <+> w)
 
 drawProgressBarGame :: Game -> Widget ResourceName
-drawProgressBarGame g = drawProgressBar (progress g) (calculateWpm g)
+drawProgressBarGame g = drawProgressBar (progress g) (calculateWpm g) "your progress"
 
-drawProgressBar :: Float -> Double -> Widget ResourceName
-drawProgressBar decimalDone wpm = progressWidget <+> wpmWidget
+drawProgressBar :: Float -> Double -> T.Text -> Widget ResourceName
+drawProgressBar decimalDone wpm label = progressWidget <+> wpmWidget
   where
-    progressWidget = addBorder "progress" (P.progressBar (Just percentStr) decimalDone)
+    progressWidget = addBorder label (P.progressBar (Just percentStr) decimalDone)
     percentStr = roundToStr 1 (decimalDone * 100) ++ "%"
     wpmWidget = addBorder "" (drawWpm wpm)
 

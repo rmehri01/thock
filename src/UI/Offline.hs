@@ -24,12 +24,17 @@ draw s = case s of
   Practice g -> drawPractice g
 
 drawList :: MenuList -> [Widget ResourceName]
-drawList l = [addBorder "" (titleWidget <=> listWidget)]
+drawList l = [drawMenu listWidget]
   where
-    listWidget = vLimitPercent 20 $ L.renderList listDrawElement True l
+    listWidget = L.renderList listDrawElement True l
 
 drawForm :: RoomForm a -> [Widget ResourceName]
-drawForm form = [C.center (renderForm form)]
+drawForm form = [drawMenu formWidget]
+  where
+    formWidget = vLimit 6 $ hLimitPercent 80 (renderForm form)
+
+drawMenu :: Widget ResourceName -> Widget ResourceName
+drawMenu w = addBorder "" (C.center titleWidget <=> padBottom Max (C.hCenter w))
 
 handleKey :: GameState -> BrickEvent ResourceName () -> EventM ResourceName (Next GameState)
 handleKey gs ev = case gs of
@@ -82,6 +87,7 @@ mkCreateRoomForm :: Username -> RoomForm Username
 mkCreateRoomForm =
   newForm
     [ formLabel "Username"
+        @@= addBorder ""
         @@= editTextField value UsernameField (Just 1)
     ]
 
@@ -89,21 +95,22 @@ mkJoinRoomForm :: RoomFormData -> RoomForm RoomFormData
 mkJoinRoomForm =
   newForm
     [ formLabel "Username"
+        @@= addBorder ""
         @@= editTextField (username . value) UsernameField (Just 1),
       formLabel "Room ID"
+        @@= addBorder ""
         @@= editTextField roomId RoomIdField (Just 1)
     ]
 
 formLabel :: T.Text -> Widget n -> Widget n
-formLabel t w =
-  padBottom (Pad 1) $
-    vLimit 1 (hLimit 15 $ txt t <+> fill ' ') <+> w
+formLabel t w = C.vCenter label <+> C.vCenter w
+  where
+    label = vLimit 1 (hLimit 15 $ withAttr secondaryAttr $ txt t <+> fill ' ')
 
 handleKeyPractice :: Game -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
 handleKeyPractice g (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt (Practice g)
-    V.EvKey (V.KChar 'b') [V.MCtrl] -> M.continue initialState
+    V.EvKey V.KEsc [] -> M.continue initialState
     V.EvKey (V.KChar 'r') [V.MCtrl] -> M.continue (startPracticeGame (g ^. quote))
     V.EvKey (V.KChar 'n') [V.MCtrl] -> liftIO generateQuote >>= M.continue . startPracticeGame
     V.EvKey (V.KChar _) [] -> nextState (g & strokes +~ 1)
