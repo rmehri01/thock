@@ -4,7 +4,6 @@ import Brick
 import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
 import Control.Monad.IO.Class
-import Data.Foldable
 import qualified Graphics.Vty as V
 import Lens.Micro
 import qualified Network.WebSockets as WS
@@ -32,25 +31,27 @@ drawWaitingRoom :: RoomId -> RoomClientState -> [RoomClientState] -> [Widget Res
 drawWaitingRoom room localSt ps = [roomIdWidget <=> (playersDisplay <+> statusDisplay) <=> helpWidget]
   where
     roomIdWidget = addBorder "room id" $ C.hCenter (txt room)
-    playersDisplay = addBorder "players" $ C.center (foldr ((\user w -> txt user <=> w) . (^. clientUsername)) emptyWidget (localSt : ps))
+    playersDisplay =
+      addBorder "players" . C.center . vBox $
+        map (txt . (^. clientUsername)) allStates
     statusDisplay =
-      -- TODO: extract
-      addBorder "status" $
-        C.center
-          ( foldr
-              ( ( \ready w ->
-                    (if ready then withAttr primaryAttr (txt "ready") else withAttr secondaryAttr (txt "not ready")) <=> w
-                )
-                  . (^. isReady)
-              )
-              emptyWidget
-              (localSt : ps)
-          )
+      addBorder "status" . C.center . vBox $
+        map (makeReadyTxt . (^. isReady)) allStates
     helpWidget = addBorder "help" $ C.hCenter (txtWrap "Press 'r' to ready up! Once everyone is ready, the match will begin.")
+    makeReadyTxt ready =
+      if ready
+        then withAttr primaryAttr (txt "ready")
+        else withAttr secondaryAttr (txt "not ready")
+    allStates = localSt : ps
 
 drawOnline :: Online -> [Widget ResourceName]
-drawOnline o = [drawFinished g, drawProgressBarGame g <=> foldl' (\w c -> w <=> drawProgressBar (c ^. clientProgress) (c ^. clientWpm) (c ^. clientName)) emptyWidget (o ^. clientStates) <=> drawPrompt g <=> drawInput g]
+drawOnline o = [drawFinished g, drawProgressBarGame g <=> otherProgressBars <=> drawPrompt g <=> drawInput g]
   where
+    otherProgressBars =
+      vBox $
+        map
+          (\gs -> drawProgressBar (gs ^. clientProgress) (gs ^. clientWpm) (gs ^. clientName))
+          (o ^. clientStates)
     g = o ^. localGame
 
 handleKeyOnlineState :: OnlineGameState -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
@@ -58,12 +59,17 @@ handleKeyOnlineState s ev = case s of
   WaitingRoom room localSt conn ps -> handleKeyWaitingRoom room localSt conn ps ev
   OnlineGame o -> handleKeyOnline o ev
 
--- TODO: pass all arguments in together or separate?
-handleKeyWaitingRoom :: RoomId -> RoomClientState -> WS.Connection -> [RoomClientState] -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
+handleKeyWaitingRoom ::
+  RoomId ->
+  RoomClientState ->
+  WS.Connection ->
+  [RoomClientState] ->
+  BrickEvent ResourceName ConnectionTick ->
+  EventM ResourceName (Next OnlineGameState)
 handleKeyWaitingRoom room localSt conn _ (AppEvent (ConnectionTick csReceived)) =
   case csReceived of
     RoomUpdate rs -> M.continue (WaitingRoom room localSt conn rs)
-    StartGame q gs -> M.continue (OnlineGame (Online {_localGame = initializeGame q, _onlineName = localSt ^. clientUsername, _onlineConnection = conn, _clientStates = gs})) -- TODO: use initial online
+    StartGame q gs -> M.continue (OnlineGame (Online (initializeGame q) (localSt ^. clientUsername) conn gs))
     _ -> error "undefined behaviour"
 handleKeyWaitingRoom room localSt conn ps (VtyEvent ev) =
   case ev of
@@ -89,6 +95,11 @@ handleKeyOnline o (VtyEvent ev) =
         then M.continue (OnlineGame o')
         else do
           updatedGame <- updateGame (o' ^. localGame) ev
-          _ <- liftIO $ sendJsonData (o ^. onlineConnection) (GameClientUpdate $ GameClientState {_clientName = o ^. onlineName, _clientProgress = progress updatedGame, _clientWpm = calculateWpm updatedGame})
+          let newClientState = GameClientState (o ^. onlineName) (progress updatedGame) (calculateWpm updatedGame)
+          _ <-
+            liftIO $
+              sendJsonData
+                (o ^. onlineConnection)
+                (GameClientUpdate newClientState)
           M.continue (OnlineGame $ o' & localGame .~ updatedGame)
 handleKeyOnline o _ = M.continue (OnlineGame o)

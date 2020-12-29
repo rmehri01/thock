@@ -13,8 +13,6 @@ import qualified Network.WebSockets as WS
 import Quotes
 import Thock
 
--- TODO: different module?
-
 data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: Bool}
   deriving (Generic)
 
@@ -22,15 +20,14 @@ makeLenses ''RoomClientState
 
 instance FromJSON RoomClientState
 
-instance ToJSON RoomClientState
+instance ToJSON RoomClientState 
 
 data GameClientState = GameClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
   deriving (Generic)
 
 makeLenses ''GameClientState
 
-instance FromJSON GameClientState
-
+instance FromJSON GameClientState 
 instance ToJSON GameClientState
 
 data RoomClient = RoomClient {_roomState :: RoomClientState, _roomConnection :: WS.Connection}
@@ -52,7 +49,8 @@ instance ToJSON ClientToServerMessage
 
 data ServerToClientMessage
   = RoomUpdate [RoomClientState]
-  | GameUpdate [GameClientState]
+  |
+    GameUpdate [GameClientState]
   | StartGame Quote [GameClientState]
   deriving (Generic)
 
@@ -71,9 +69,6 @@ data OnlineGameState
   | OnlineGame Online
 
 makeLenses ''OnlineGameState
-
-initialOnline :: Quote -> T.Text -> WS.Connection -> Online
-initialOnline q name conn = Online {_localGame = initializeGame q, _onlineName = name, _onlineConnection = conn, _clientStates = []}
 
 sendJsonData :: ToJSON a => WS.Connection -> a -> IO ()
 sendJsonData conn a = WS.sendTextData conn (encode a)

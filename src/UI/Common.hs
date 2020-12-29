@@ -10,7 +10,6 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
 import Control.Monad.IO.Class
 import Data.FileEmbed
-import Data.Foldable
 import qualified Data.Text as T
 import Data.Text.Encoding
 import Data.Time
@@ -24,7 +23,7 @@ import UI.Attributes
 titleWidget :: Widget n
 titleWidget = withAttr titleAttr logo
   where
-    logo = foldl' (<=>) emptyWidget . map txt . T.lines $ decodeUtf8 $(embedFile "resources/logo.txt")
+    logo = vBox . map txt . T.lines $ decodeUtf8 $(embedFile "resources/logo.txt")
 
 listDrawElement :: Bool -> T.Text -> Widget n
 listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
@@ -98,7 +97,7 @@ lineLengths g lim =
 drawTextBlock :: [Widget ResourceName] -> [Int] -> Widget ResourceName
 drawTextBlock ws ls
   | null ws || null ls = emptyWidget
-  | otherwise = foldl1 (<+>) row <=> drawTextBlock rest (tail ls)
+  | otherwise = hBox row <=> drawTextBlock rest (tail ls)
   where
     (row, rest) = splitAt (head ls) ws
 
