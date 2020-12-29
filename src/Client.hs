@@ -9,7 +9,7 @@ import Brick
 import Brick.BChan
 import Control.Concurrent (forkFinally)
 import Control.Monad (forever)
-import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Graphics.Vty as V
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
@@ -18,7 +18,7 @@ import Thock
 import UI.Online
 
 --------------------------------------------------------------------------------
-createApp :: Bool -> RoomFormData -> WS.ClientApp ()
+createApp :: Bool -> RoomFormData -> WS.ClientApp (Maybe T.Text)
 createApp isCreating formData@(RoomFormData (Username user) room) conn = do
   _ <- sendJsonData conn (formData, isCreating)
 
@@ -27,8 +27,8 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
     else do
       res <- receiveJsonData conn
       case res of
-        Just others -> startRoom others
-        Nothing -> error "room doesnt exist" -- TODO: more friendly exit
+        Right others -> startRoom others
+        Left msg -> return (Just msg)
   where
     localSt = RoomClientState user False
     startRoom others = do
@@ -45,8 +45,9 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
       initialVty <- buildVty
       let w = WaitingRoomState (WaitingRoom room localSt conn others)
       _ <- customMain initialVty buildVty (Just connChan) onlineApp w
-      WS.sendClose conn ("Bye!" :: Text)
+      WS.sendClose conn ("Bye!" :: T.Text)
+      return Nothing
 
 --------------------------------------------------------------------------------
-runClient :: Bool -> RoomFormData -> IO ()
+runClient :: Bool -> RoomFormData -> IO (Maybe T.Text)
 runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createApp isCreating formData)

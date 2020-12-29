@@ -42,6 +42,9 @@ newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty, _activeGam
 addRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
 addRoomClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
+clientExists :: RoomId -> T.Text -> ServerState -> Bool
+clientExists room name ss = any (\r -> r ^. (state . username) == name) ((ss ^. rooms) Map.! room)
+
 removeRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
 removeRoomClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (state . username)) client) room
 
@@ -74,8 +77,8 @@ application :: MVar ServerState -> WS.ServerApp
 application mState pending = do
   conn <- WS.acceptRequest pending
   WS.withPingThread conn 30 (return ()) $ do
-    -- TODO: probably want to break into room and game parts
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
+
     let client = RoomClient (RoomClientState user False) conn
         disconnect = do
           -- TODO: disconnect from room and game separate?
@@ -83,6 +86,7 @@ application mState pending = do
           s <- modifyMVar mState $ \s ->
             let s' = removeRoomClient room client s in return (s', s')
           roomBroadcastExceptSending room user s
+
     flip finally disconnect $ do
       if isCreating
         then do
@@ -91,15 +95,17 @@ application mState pending = do
           talk conn mState room
         else do
           ss <- readMVar mState
-          if Map.member room (ss ^. rooms)
-            then do
-              modifyMVar_ mState $ \s -> do
-                let s' = addRoomClient room client s
-                sendJsonData conn (Just (clientStatesExceptSelf (client ^. state) ((s' ^. rooms) Map.! room)))
-                roomBroadcastExceptSending room user s'
-                return s'
-              talk conn mState room
-            else sendJsonData conn (Nothing :: Maybe [RoomClientState])
+          let response
+                | not $ Map.member room (ss ^. rooms) = sendJsonData conn (Left "room does not exist" :: Either T.Text [RoomClientState])
+                | clientExists room user ss = sendJsonData conn (Left "username already exists in that room" :: Either T.Text [RoomClientState])
+                | otherwise = do
+                  modifyMVar_ mState $ \s -> do
+                    let s' = addRoomClient room client s
+                    sendJsonData conn (Just (clientStatesExceptSelf (client ^. state) ((s' ^. rooms) Map.! room)))
+                    roomBroadcastExceptSending room user s'
+                    return s'
+                  talk conn mState room
+          response
 
 talk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
 talk conn mState room = forever $ do
@@ -152,23 +158,6 @@ roomBroadcastExceptSending room sending ss =
 clientStatesExceptSelf :: RoomClientState -> [RoomClient] -> [RoomClientState]
 clientStatesExceptSelf self = deleteFirstEqualOn (^. username) self . map (^. state)
 
--- TODO: first case
-
--- | not (prefix `T.isPrefixOf` ss) ->
---   WS.sendTextData conn ("Wrong announcement" :: Text)
--- TODO: second case, validation
--- | any
---     ($ fst client)
---     [T.null, T.any isPunctuation, T.any isSpace] ->
---   WS.sendTextData
---     conn
---     ( "Name cannot "
---         <> "contain punctuation or whitespace, and "
---         <> "cannot be empty" :: Text
---     )
--- TODO: third case, already exists validation
--- | clientExists client cs ->
---   WS.sendTextData conn ("User already exists" :: Text)
 deleteFirstEqualOn :: Eq b => (a -> b) -> a -> [a] -> [a]
 deleteFirstEqualOn f toDelete = deleteFirstWhere (((==) `on` f) toDelete)
 

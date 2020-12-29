@@ -22,6 +22,12 @@ draw s = case s of
   CreateRoomMenu form -> drawForm form
   JoinRoomMenu form -> drawForm form
   Practice g -> drawPractice g
+  ErrorOverlay gs t -> drawError gs t
+
+drawError :: GameState -> T.Text -> [Widget ResourceName]
+drawError gs t = errorPopup : draw gs
+  where
+    errorPopup = C.centerLayer . withAttr secondaryAttr $ addBorder "error" (txt t)
 
 drawList :: MenuList -> [Widget ResourceName]
 drawList l = [drawMenu listWidget]
@@ -43,6 +49,7 @@ handleKey gs ev = case gs of
   CreateRoomMenu form -> handleKeyForm CreateRoomMenu (\u -> generateRoomId >>= runClient True . RoomFormData u) form ev
   JoinRoomMenu form -> handleKeyForm JoinRoomMenu (runClient False) form ev
   Practice g -> handleKeyPractice g ev
+  ErrorOverlay prev _ -> M.continue prev -- after receiving any event, remove the error overlay
 
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next GameState)
 handleKeyMainMenu l (VtyEvent e) = case e of
@@ -73,13 +80,13 @@ handleKeyOnlineSelect l _ = M.continue (OnlineSelect l)
 
 handleKeyForm ::
   (RoomForm a -> GameState) ->
-  (a -> IO ()) ->
+  (a -> IO (Maybe T.Text)) ->
   RoomForm a ->
   BrickEvent ResourceName () ->
   EventM ResourceName (Next GameState)
 handleKeyForm ctr onEnter form ev@(VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.continue initialState
-  V.EvKey V.KEnter [] -> M.suspendAndResume (onEnter (formState form) >> return initialState)
+  V.EvKey V.KEnter [] -> M.suspendAndResume (maybe initialState (ErrorOverlay (ctr form)) <$> onEnter (formState form))
   _ -> handleFormEvent ev form >>= M.continue . ctr
 handleKeyForm ctr _ form _ = M.continue (ctr form)
 

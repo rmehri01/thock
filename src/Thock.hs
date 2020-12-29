@@ -71,6 +71,7 @@ data GameState
   | CreateRoomMenu (RoomForm Username)
   | JoinRoomMenu (RoomForm RoomFormData)
   | Practice Game
+  | ErrorOverlay GameState T.Text
 
 makeLenses ''GameState
 
