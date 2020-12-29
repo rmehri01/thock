@@ -24,7 +24,7 @@ instance FromJSON Quote where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
 
 instance ToJSON Quote where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1} -- TODO: might not have to do
+  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
 
 generateQuote :: IO Quote
 generateQuote = randomElem qs

@@ -20,39 +20,32 @@ import UI.Online
 --------------------------------------------------------------------------------
 createApp :: Bool -> RoomFormData -> WS.ClientApp ()
 createApp isCreating formData@(RoomFormData (Username user) room) conn = do
-  connChan <- newBChan 10
-  -- let startOnlineGame name = do
-  --       q <- receiveJsonData conn -- TODO: handle possibility of failure
-  --       let buildVty = V.mkVty V.defaultConfig
-  --       initialVty <- buildVty
-  --       let o = initialOnline q name conn
-  --       _ <- sendJsonData conn (ClientState {_clientName = name, _clientProgress = progress (o ^. localGame), _clientWpm = calculateWpm (o ^. localGame)})
-  --       _ <- customMain initialVty buildVty (Just connChan) onlineApp o
-  --       WS.sendClose conn ("Bye!" :: Text)
-  let startRoom localSt ps = do
-        -- fork a thread that writes custom events when received from server
-        _ <-
-          forkFinally
-            ( forever $ do
-                cs <- receiveJsonData conn
-                writeBChan connChan (ConnectionTick cs)
-            )
-            (const $ return ()) -- terminate when connection is closed and ignore any exceptions
-        let buildVty = V.mkVty V.defaultConfig
-        initialVty <- buildVty
-        let o = WaitingRoom room localSt conn ps
-        _ <- customMain initialVty buildVty (Just connChan) onlineApp o
-        WS.sendClose conn ("Bye!" :: Text)
-
   _ <- sendJsonData conn (formData, isCreating)
 
   if isCreating
-    then startRoom (RoomClientState user False) []
+    then startRoom []
     else do
       res <- receiveJsonData conn
       case res of
-        Just ps -> startRoom (RoomClientState user False) ps -- TODO: duplicated
+        Just others -> startRoom others
         Nothing -> error "room doesnt exist" -- TODO: more friendly exit
+  where
+    localSt = RoomClientState user False
+    startRoom others = do
+      connChan <- newBChan 10
+      -- fork a thread that writes custom events when received from server
+      _ <-
+        forkFinally
+          ( forever $ do
+              serverMessage <- receiveJsonData conn
+              writeBChan connChan (ConnectionTick serverMessage)
+          )
+          (const $ return ()) -- terminate when connection is closed and ignore any exceptions
+      let buildVty = V.mkVty V.defaultConfig
+      initialVty <- buildVty
+      let o = WaitingRoom room localSt conn others
+      _ <- customMain initialVty buildVty (Just connChan) onlineApp o
+      WS.sendClose conn ("Bye!" :: Text)
 
 --------------------------------------------------------------------------------
 runClient :: Bool -> RoomFormData -> IO ()

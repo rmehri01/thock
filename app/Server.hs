@@ -35,14 +35,6 @@ main = runServer
 newServerState :: Quote -> ServerState
 newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty, _activeGames = Map.empty}
 
--- numClients :: ServerState -> Int
--- numClients ss = undefined
---   -- length (ss ^. clients) -- TODO: s instead of ss
-
--- clientExists :: Client -> ServerState -> Bool
--- clientExists client ss = undefined
---   -- any (((/=) `on` (^. (state . clientName))) client) (ss ^. clients)
-
 addRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
 addRoomClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
@@ -79,7 +71,6 @@ application mState pending = do
   conn <- WS.acceptRequest pending
   WS.withPingThread conn 30 (return ()) $ do
     -- TODO: probably want to break into room and game parts
-    -- _ <- readMVar mState >>= (\s -> sendJsonData conn (s ^. serverQuote))
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
     let client = RoomClient (RoomClientState user False) conn
         disconnect = do
@@ -144,31 +135,6 @@ makeActive room ss =
   where
     clients = map (\(RoomClient (RoomClientState user _) conn) -> GameClient (GameClientState user 0 0) conn) states
     states = (ss ^. rooms) Map.! room
-
--- cs <- receiveJsonData conn
--- -- ss <- readMVar state
--- case cs of
---   _
---     | otherwise -> flip finally disconnect $ do
---       modifyMVar_ mState $ \s -> do
---         let s' = addRoomClient client s
---         broadcast s'
---         return s'
---       talk conn mState
---     where
---       client = Client {_state = cs, _connection = conn}
---       disconnect = do
---         -- Remove client and return new state
---         s <- modifyMVar mState $ \s ->
---           let s' = removeRoomClient client s in return (s', s')
---         broadcast s
-
--- talk :: WS.Connection -> MVar ServerState -> IO ()
--- talk conn mState = forever $ do
---   c <- receiveJsonData conn
---   s <- modifyMVar mState $ \s ->
---     let s' = updateRoomClient c s in return (s', s')
---   broadcast s
 
 roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
 roomBroadcastExceptSending room sending ss =

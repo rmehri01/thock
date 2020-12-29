@@ -20,22 +20,18 @@ data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: B
 
 makeLenses ''RoomClientState
 
-instance FromJSON RoomClientState where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1} -- TODO: field modifiers might not be needed
+instance FromJSON RoomClientState
 
-instance ToJSON RoomClientState where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON RoomClientState
 
 data GameClientState = GameClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
   deriving (Generic)
 
 makeLenses ''GameClientState
 
-instance FromJSON GameClientState where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+instance FromJSON GameClientState
 
-instance ToJSON GameClientState where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON GameClientState
 
 data RoomClient = RoomClient {_roomState :: RoomClientState, _roomConnection :: WS.Connection}
 
@@ -56,8 +52,7 @@ instance ToJSON ClientToServerMessage
 
 data ServerToClientMessage
   = RoomUpdate [RoomClientState]
-  | -- | JoinRoomConfirmation (Maybe [RoomClientState])
-    GameUpdate [GameClientState]
+  | GameUpdate [GameClientState]
   | StartGame Quote [GameClientState]
   deriving (Generic)
 
