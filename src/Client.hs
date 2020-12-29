@@ -43,8 +43,8 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
           (const $ return ()) -- terminate when connection is closed and ignore any exceptions
       let buildVty = V.mkVty V.defaultConfig
       initialVty <- buildVty
-      let o = WaitingRoom room localSt conn others
-      _ <- customMain initialVty buildVty (Just connChan) onlineApp o
+      let w = WaitingRoomState (WaitingRoom room localSt conn others)
+      _ <- customMain initialVty buildVty (Just connChan) onlineApp w
       WS.sendClose conn ("Bye!" :: Text)
 
 --------------------------------------------------------------------------------

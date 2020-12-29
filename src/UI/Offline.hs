@@ -6,10 +6,10 @@ import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import Client
+import Control.Lens
 import Control.Monad.IO.Class
 import qualified Data.Text as T
 import qualified Graphics.Vty as V
-import Lens.Micro
 import Quotes
 import Thock
 import UI.Attributes

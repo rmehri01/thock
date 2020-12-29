@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Server where
@@ -11,20 +12,23 @@ import Control.Concurrent
     readMVar,
   )
 import Control.Exception (finally)
+import Control.Lens
 import Control.Monad (forM_, forever)
 import Data.Function
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro
-import Lens.Micro.TH
 import qualified Network.WebSockets as WS
 import Online
 import Quotes
 import Thock
 
-data ServerState = ServerState {_serverQuote :: Quote, _rooms :: Map RoomId [RoomClient], _activeGames :: Map RoomId [GameClient]}
+data ServerState = ServerState
+  { _serverQuote :: Quote,
+    _rooms :: Map RoomId [RoomClient],
+    _activeGames :: Map RoomId [GameClient]
+  }
   deriving (Generic)
 
 makeLenses ''ServerState
@@ -39,21 +43,21 @@ addRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
 addRoomClient room client ss = ss & rooms %~ Map.adjust (client :) room
 
 removeRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState
-removeRoomClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (roomState . clientUsername)) client) room
+removeRoomClient room client ss = ss & rooms %~ Map.adjust (deleteFirstEqualOn (^. (state . username)) client) room
 
-updateRoomClient :: RoomId -> RoomClientState -> ServerState -> ServerState
+updateRoomClient :: RoomId -> RoomClientState -> ServerState -> ServerState -- TODO: abstract
 updateRoomClient room client ss = ss & rooms %~ Map.adjust (map updateIfClient) room
   where
     updateIfClient other =
-      if other ^. (roomState . clientUsername) == client ^. clientUsername
-        then other & roomState .~ client
+      if other ^. (state . username) == client ^. username
+        then other & state .~ client
         else other
 
 updateGameClient :: RoomId -> GameClientState -> ServerState -> ServerState
 updateGameClient room client ss = ss & activeGames %~ Map.adjust (map updateIfClient) room
   where
     updateIfClient other =
-      if other ^. (state . clientName) == client ^. clientName
+      if other ^. (state . username) == client ^. username
         then other & state .~ client
         else other
 
@@ -91,7 +95,7 @@ application mState pending = do
             then do
               modifyMVar_ mState $ \s -> do
                 let s' = addRoomClient room client s
-                sendJsonData conn (Just (clientStatesExceptSelf (client ^. roomState) ((s' ^. rooms) Map.! room)))
+                sendJsonData conn (Just (clientStatesExceptSelf (client ^. state) ((s' ^. rooms) Map.! room)))
                 roomBroadcastExceptSending room user s'
                 return s'
               talk conn mState room
@@ -105,27 +109,27 @@ talk conn mState room = forever $ do
       -- TODO: abstract
       s <- modifyMVar mState $ \s ->
         let s' = updateRoomClient room r s in return (s', s')
-      if canStart (map (^. roomState) $ (s ^. rooms) Map.! room)
+      if canStart (map (^. state) $ (s ^. rooms) Map.! room)
         then do
           newS <- modifyMVar mState $ \s' -> do
             let s'' = makeActive room s' in return (s'', s'')
           forM_
             ((newS ^. activeGames) Map.! room)
-            $ \(GameClient gs conn') -> sendJsonData conn' (StartGame (newS ^. serverQuote) (deleteFirstEqualOn (^. clientName) gs $ map (^. state) ((newS ^. activeGames) Map.! room))) -- TODO: abstract broadcast
+            $ \(GameClient gs conn') -> sendJsonData conn' (StartGame (newS ^. serverQuote) (deleteFirstEqualOn (^. username) gs $ map (^. state) ((newS ^. activeGames) Map.! room))) -- TODO: abstract broadcast
         else do
-          roomBroadcastExceptSending room (r ^. clientUsername) s
+          roomBroadcastExceptSending room (r ^. username) s
     GameClientUpdate g -> do
       s <- modifyMVar mState $ \s ->
         let s' = updateGameClient room g s in return (s', s')
-      gameBroadcastExceptSending room (g ^. clientName) s
+      gameBroadcastExceptSending room (g ^. username) s
 
 gameBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO () -- TODO: abstract
 gameBroadcastExceptSending room sending ss =
   forM_
     csFiltered
-    $ \(GameClient gs conn) -> sendJsonData conn (GameUpdate $ deleteFirstEqualOn (^. clientName) gs $ map (^. state) cs) -- TODO: generalize
+    $ \(GameClient gs conn) -> sendJsonData conn (GameUpdate $ deleteFirstEqualOn (^. username) gs $ map (^. state) cs) -- TODO: generalize
   where
-    csFiltered = deleteFirstWhere (\c -> (c ^. (state . clientName)) == sending) cs
+    csFiltered = deleteFirstWhere (\c -> (c ^. (state . username)) == sending) cs
     cs = (ss ^. activeGames) Map.! room
 
 makeActive :: RoomId -> ServerState -> ServerState
@@ -136,17 +140,17 @@ makeActive room ss =
     clients = map (\(RoomClient (RoomClientState user _) conn) -> GameClient (GameClientState user 0 0) conn) states
     states = (ss ^. rooms) Map.! room
 
-roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
+roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO () -- TODO: abstract
 roomBroadcastExceptSending room sending ss =
   forM_
     csFiltered
     $ \(RoomClient rs conn) -> sendJsonData conn (RoomUpdate $ clientStatesExceptSelf rs cs)
   where
-    csFiltered = deleteFirstWhere (\c -> (c ^. (roomState . clientUsername)) == sending) cs
+    csFiltered = deleteFirstWhere (\c -> (c ^. (state . username)) == sending) cs
     cs = (ss ^. rooms) Map.! room
 
 clientStatesExceptSelf :: RoomClientState -> [RoomClient] -> [RoomClientState]
-clientStatesExceptSelf self = deleteFirstEqualOn (^. clientUsername) self . map (^. roomState)
+clientStatesExceptSelf self = deleteFirstEqualOn (^. username) self . map (^. state)
 
 -- TODO: first case
 

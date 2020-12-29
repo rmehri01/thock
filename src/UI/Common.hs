@@ -8,13 +8,13 @@ import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
+import Control.Lens
 import Control.Monad.IO.Class
 import Data.FileEmbed
 import qualified Data.Text as T
 import Data.Text.Encoding
 import Data.Time
 import Graphics.Vty (Event)
-import Lens.Micro
 import Quotes
 import Text.Printf
 import Thock
@@ -49,7 +49,7 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
     makeStatWidget t w = vLimit 1 (hLimit 15 (withAttr secondaryAttr (txt t) <+> fill ' ') <+> w)
 
 drawProgressBarGame :: Game -> Widget ResourceName
-drawProgressBarGame g = drawProgressBar (progress g) (calculateWpm g) "your progress"
+drawProgressBarGame g = drawProgressBar (calculateProgress g) (calculateWpm g) "your progress"
 
 drawProgressBar :: Float -> Double -> T.Text -> Widget ResourceName
 drawProgressBar decimalDone wpm label = progressWidget <+> wpmWidget

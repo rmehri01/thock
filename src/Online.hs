@@ -1,42 +1,58 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Online where
 
+import Control.Lens
 import Data.Aeson
 import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
-import Lens.Micro
-import Lens.Micro.TH
 import qualified Network.WebSockets as WS
 import Quotes
 import Thock
 
-data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: Bool}
+data RoomClientState = RoomClientState
+  { _username :: T.Text,
+    _isReady :: Bool
+  }
   deriving (Generic)
 
-makeLenses ''RoomClientState
+makeFieldsNoPrefix ''RoomClientState
 
 instance FromJSON RoomClientState
 
-instance ToJSON RoomClientState 
+instance ToJSON RoomClientState
 
-data GameClientState = GameClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
+data GameClientState = GameClientState
+  { _username :: T.Text,
+    _progress :: Float,
+    _wpm :: Double
+  }
   deriving (Generic)
 
-makeLenses ''GameClientState
+makeFieldsNoPrefix ''GameClientState
 
-instance FromJSON GameClientState 
+instance FromJSON GameClientState
+
 instance ToJSON GameClientState
 
-data RoomClient = RoomClient {_roomState :: RoomClientState, _roomConnection :: WS.Connection}
+data RoomClient = RoomClient
+  { _state :: RoomClientState,
+    _connection :: WS.Connection
+  }
 
-makeLenses ''RoomClient
+makeFieldsNoPrefix ''RoomClient
 
-data GameClient = GameClient {_state :: GameClientState, _connection :: WS.Connection}
+data GameClient = GameClient
+  { _state :: GameClientState,
+    _connection :: WS.Connection
+  }
 
-makeLenses ''GameClient
+makeFieldsNoPrefix ''GameClient
 
 data ClientToServerMessage
   = RoomClientUpdate RoomClientState
@@ -49,8 +65,7 @@ instance ToJSON ClientToServerMessage
 
 data ServerToClientMessage
   = RoomUpdate [RoomClientState]
-  |
-    GameUpdate [GameClientState]
+  | GameUpdate [GameClientState]
   | StartGame Quote [GameClientState]
   deriving (Generic)
 
@@ -60,15 +75,27 @@ instance ToJSON ServerToClientMessage
 
 newtype ConnectionTick = ConnectionTick ServerToClientMessage
 
-data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [GameClientState]}
+data Online = Online
+  { _localGame :: Game,
+    _username :: T.Text,
+    _connection :: WS.Connection,
+    _otherPlayers :: [GameClientState]
+  }
 
-makeLenses ''Online
+makeFieldsNoPrefix ''Online
+
+data WaitingRoom = WaitingRoom
+  { _roomId :: RoomId,
+    _localState :: RoomClientState,
+    _connection :: WS.Connection,
+    _otherPlayers :: [RoomClientState]
+  }
+
+makeFieldsNoPrefix ''WaitingRoom
 
 data OnlineGameState
-  = WaitingRoom {_roomId :: RoomId, _localState :: RoomClientState, _waitingRoomConnection :: WS.Connection, _otherPlayers :: [RoomClientState]}
+  = WaitingRoomState WaitingRoom
   | OnlineGame Online
-
-makeLenses ''OnlineGameState
 
 sendJsonData :: ToJSON a => WS.Connection -> a -> IO ()
 sendJsonData conn a = WS.sendTextData conn (encode a)

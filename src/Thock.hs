@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Thock where
 
@@ -7,6 +9,7 @@ import Brick.Forms
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Control.Applicative
+import Control.Lens
 import Data.Aeson
 import Data.Char
 import Data.Function
@@ -15,8 +18,6 @@ import Data.Text.Zipper
 import Data.Time
 import qualified Data.Vector as Vec
 import GHC.Generics (Generic)
-import Lens.Micro
-import Lens.Micro.TH
 import Quotes
 import System.Random
 
@@ -56,7 +57,7 @@ data RoomFormData = RoomFormData
   }
   deriving (Generic)
 
-makeLenses ''RoomFormData
+makeFieldsNoPrefix ''RoomFormData
 
 instance FromJSON RoomFormData
 
@@ -73,8 +74,8 @@ data GameState
 
 makeLenses ''GameState
 
-progress :: Game -> Float
-progress g = ((/) `on` fromIntegral) correct total
+calculateProgress :: Game -> Float
+calculateProgress g = ((/) `on` fromIntegral) correct total
   where
     correct = numCorrectChars g
     total = g ^. (quote . numChars)

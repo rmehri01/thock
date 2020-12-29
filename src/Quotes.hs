@@ -3,12 +3,12 @@
 
 module Quotes where
 
+import Control.Lens
 import Data.Aeson
 import Data.FileEmbed
 import Data.Maybe
 import qualified Data.Text as T
 import GHC.Generics
-import Lens.Micro.TH
 import System.Random
 
 data Quote = Quote
