@@ -69,8 +69,8 @@ handleKeyOnlineSelect l (VtyEvent e) = case e of
     | Just i <- L.listSelected l ->
       M.continue
         ( if i == 0
-            then CreateRoomMenu (mkCreateRoomForm emptyUsername)
-            else JoinRoomMenu (mkJoinRoomForm emptyRoomFormData)
+            then CreateRoomMenu (makeCreateRoomForm emptyUsername)
+            else JoinRoomMenu (makeJoinRoomForm emptyRoomFormData)
         )
     where
       emptyUsername = Username ""
@@ -90,16 +90,16 @@ handleKeyForm ctr onEnter form ev@(VtyEvent e) = case e of
   _ -> handleFormEvent ev form >>= M.continue . ctr
 handleKeyForm ctr _ form _ = M.continue (ctr form)
 
-mkCreateRoomForm :: Username -> RoomForm Username
-mkCreateRoomForm =
+makeCreateRoomForm :: Username -> RoomForm Username
+makeCreateRoomForm =
   newForm
     [ formLabel "Username"
         @@= addBorder ""
         @@= editTextField value UsernameField (Just 1)
     ]
 
-mkJoinRoomForm :: RoomFormData -> RoomForm RoomFormData
-mkJoinRoomForm =
+makeJoinRoomForm :: RoomFormData -> RoomForm RoomFormData
+makeJoinRoomForm =
   newForm
     [ formLabel "Username"
         @@= addBorder ""
