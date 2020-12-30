@@ -1,12 +1,10 @@
---------------------------------------------------------------------------------
 module Client
   ( runClient,
   )
 where
 
---------------------------------------------------------------------------------
-import Brick
-import Brick.BChan
+import Brick (customMain)
+import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkFinally)
 import Control.Monad (forever)
 import qualified Data.Text as T
@@ -14,10 +12,18 @@ import qualified Graphics.Vty as V
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
 import Online
-import Thock
-import UI.Online
+  ( ConnectionTick (ConnectionTick),
+    Online (WaitingRoom),
+    RoomClientState (RoomClientState),
+    WaitingRoomState (WaitingRoomState),
+    receiveJsonData,
+    sendJsonData,
+  )
+import Thock (RoomFormData (RoomFormData), Username (Username))
+import UI.Online (onlineApp)
 
---------------------------------------------------------------------------------
+-- | Sets up the initial state of the 'Online' state using the formData
+-- based on if the player is creating the room.
 createApp :: Bool -> RoomFormData -> WS.ClientApp (Maybe T.Text)
 createApp isCreating formData@(RoomFormData (Username user) room) conn = do
   _ <- sendJsonData conn (formData, isCreating)
@@ -28,7 +34,7 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
       res <- receiveJsonData conn
       case res of
         Right others -> startRoom others
-        Left msg -> return (Just msg)
+        Left msg -> return (Just msg) -- Stop connection due to error message received from server
   where
     localSt = RoomClientState user False
     startRoom others = do
@@ -43,11 +49,11 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
           (const $ return ()) -- terminate when connection is closed and ignore any exceptions
       let buildVty = V.mkVty V.defaultConfig
       initialVty <- buildVty
-      let w = WaitingRoomState (WaitingRoom room localSt conn others)
+      let w = WaitingRoom (WaitingRoomState room localSt conn others)
       _ <- customMain initialVty buildVty (Just connChan) onlineApp w
       WS.sendClose conn ("Bye!" :: T.Text)
-      return Nothing
+      return Nothing -- Online connection finished successfully with no errors
 
---------------------------------------------------------------------------------
+-- | Connects to the websocket server and runs the client app
 runClient :: Bool -> RoomFormData -> IO (Maybe T.Text)
 runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createApp isCreating formData)

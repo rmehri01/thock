@@ -5,38 +5,62 @@
 
 module Thock where
 
-import Brick.Forms
+import Brick.Forms (Form)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
-import Control.Applicative
+import Control.Applicative (Applicative (liftA2))
 import Control.Lens
-import Data.Aeson
-import Data.Char
-import Data.Function
+  ( makeFieldsNoPrefix,
+    makeLenses,
+    (%~),
+    (&),
+    (?~),
+    (^.),
+  )
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Char (isAlphaNum, isAscii)
+import Data.Function (on)
 import qualified Data.Text as T
 import Data.Text.Zipper
-import Data.Time
+  ( TextZipper,
+    clearZipper,
+    currentLine,
+    cursorPosition,
+    getText,
+    moveLeft,
+    moveRight,
+    textZipper,
+  )
+import Data.Time (UTCTime, diffUTCTime)
 import qualified Data.Vector as Vec
 import GHC.Generics (Generic)
-import Quotes
-import System.Random
+import Quotes (Quote, numChars, text)
+import System.Random (Random (randoms), getStdGen)
 
+-- | Unique identifiers to describe cursor locations
 data ResourceName
   = UsernameField
   | RoomIdField
   | Ordinary
   deriving (Eq, Ord, Show)
 
-data Game = Game
-  { _prompt :: TextZipper T.Text,
+-- | The state that tracks a player's progress
+data GameState = GameState
+  { -- | Current word the player is on, as well as previous and future words
+    _prompt :: TextZipper T.Text,
+    -- | Player input for the current word
     _input :: E.Editor T.Text ResourceName,
+    -- | The quote being typed
     _quote :: Quote,
+    -- | The time the game started if it has started
     _start :: Maybe UTCTime,
+    -- | The last time the game was updated if it has started
     _lastUpdated :: Maybe UTCTime,
+    -- | The number of keyboard strokes made
     _strokes :: Int
   }
 
-makeLenses ''Game
+makeLenses ''GameState
 
 type MenuList = L.List ResourceName T.Text
 
@@ -51,6 +75,7 @@ instance ToJSON Username
 
 type RoomId = T.Text
 
+-- | The data needed to join an online room
 data RoomFormData = RoomFormData
   { _username :: Username,
     _roomId :: RoomId
@@ -65,33 +90,37 @@ instance ToJSON RoomFormData
 
 type RoomForm a = Form a () ResourceName
 
-data GameState
+-- | The current status of the game
+data Game
   = MainMenu MenuList
   | OnlineSelect MenuList
   | CreateRoomMenu (RoomForm Username)
   | JoinRoomMenu (RoomForm RoomFormData)
-  | Practice Game
-  | ErrorOverlay GameState T.Text
+  | Practice GameState
+  | ErrorOverlay Game T.Text
 
-makeLenses ''GameState
+makeLenses ''Game
 
-calculateProgress :: Game -> Float
+-- | Produces the decimal amount the player has completed correctly
+calculateProgress :: GameState -> Float
 calculateProgress g = ((/) `on` fromIntegral) correct total
   where
     correct = numCorrectChars g
     total = g ^. (quote . numChars)
 
-numCorrectChars :: Game -> Int
+-- | Produces the total number of correct characters the player has typed
+numCorrectChars :: GameState -> Int
 numCorrectChars g = correctBefore + col
   where
     correctBefore = T.length . foldMap (`T.snoc` ' ') . take row $ getText tz
     (row, col) = cursorPosition tz
     tz = g ^. prompt
 
-movePromptCursor :: Game -> Game
+-- | Updates the prompt to be in sync with the user's input
+movePromptCursor :: GameState -> GameState
 movePromptCursor g =
   if currentWordFinished
-    then g & prompt %~ moveRight & input %~ E.applyEdit clearZipper
+    then g & prompt %~ moveRight & input %~ E.applyEdit clearZipper -- move onto the next word and clear the input box
     else g & prompt %~ movePromptByN moveAmount
   where
     currentWordFinished = currentInput == T.snoc currentWord ' '
@@ -100,48 +129,57 @@ movePromptCursor g =
     currentInput = head $ E.getEditContents (g ^. input)
     currentWord = currentLine (g ^. prompt)
 
+-- | Moves the prompt by n spaces right if positive and left if negative
 movePromptByN :: Int -> TextZipper T.Text -> TextZipper T.Text
 movePromptByN n tz
   | n < 0 = movePromptByN (n + 1) (moveLeft tz)
   | n > 0 = movePromptByN (n - 1) (moveRight tz)
   | otherwise = tz
 
-numCorrectCurrentWord :: Game -> Int
+-- | Produces the number of correct characters the player has typed in the current word
+numCorrectCurrentWord :: GameState -> Int
 numCorrectCurrentWord g = length . takeWhile (uncurry (==)) $ T.zip currentWord currentInput
   where
     currentWord = currentLine (g ^. prompt)
     currentInput = head $ E.getEditContents (g ^. input)
 
-numIncorrectChars :: Game -> Int
+-- | Produces the number of incorrect characters the player has typed
+numIncorrectChars :: GameState -> Int
 numIncorrectChars g = T.length currentInput - numCorrectCurrentWord g
   where
     currentInput = head $ E.getEditContents (g ^. input)
 
-updateTime :: UTCTime -> Game -> Game
+-- | Starts the timer if it hasn't started already and sets lastUpdated to t
+updateTime :: UTCTime -> GameState -> GameState
 updateTime t g = g' & lastUpdated ?~ t
   where
     g' = case g ^. start of
       Nothing -> g & start ?~ t
       _ -> g
 
-calculateWpm :: Game -> Double
+-- | Calculates typing speed in words per minute where a word is 5 characters
+calculateWpm :: GameState -> Double
 calculateWpm g = if s == 0 then 0 else cps * (60 / 5)
   where
     cps = fromIntegral (numCorrectChars g) / s
     s = secondsElapsed g
 
-accuracy :: Game -> Double
+-- | Calculates decimal amount of correct typed / total typed characters
+accuracy :: GameState -> Double
 accuracy g = ((/) `on` fromIntegral) (g ^. (quote . numChars)) (g ^. strokes)
 
-secondsElapsed :: Game -> Double
+-- | The number of seconds from start to lastUpdated
+secondsElapsed :: GameState -> Double
 secondsElapsed g = maybe 0 realToFrac (liftA2 diffUTCTime (g ^. lastUpdated) (g ^. start))
 
-isDone :: Game -> Bool
+-- | Produces true if the game is done, false otherwise
+isDone :: GameState -> Bool
 isDone g = numCorrectChars g == g ^. (quote . numChars)
 
-initializeGame :: Quote -> Game
-initializeGame q =
-  Game
+-- | Creates an initial game with the given quote
+initializeGameState :: Quote -> GameState
+initializeGameState q =
+  GameState
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
       _input = E.editor Ordinary (Just 1) "",
       _quote = q,
@@ -150,14 +188,18 @@ initializeGame q =
       _strokes = 0
     }
 
-initialState :: GameState
-initialState = MainMenu (L.list Ordinary (Vec.fromList ["Practice", "Online"]) 2)
+-- | Creates an initial 'Game' starting at the main menu
+initialGame :: Game
+initialGame = MainMenu (L.list Ordinary (Vec.fromList ["Practice", "Online"]) 2)
 
-onlineSelectState :: GameState
+-- | Creates a 'Game' for the online select menu with options to create or join a room
+onlineSelectState :: Game
 onlineSelectState = OnlineSelect (L.list Ordinary (Vec.fromList ["Create room", "Join room"]) 2)
 
-startPracticeGame :: Quote -> GameState
-startPracticeGame q = Practice (initializeGame q)
+-- | Initializes a 'Practice' game with the given quote
+startPracticeGame :: Quote -> Game
+startPracticeGame q = Practice (initializeGameState q)
 
+-- | Randomly generates an alphanumeric 'RoomId'
 generateRoomId :: IO RoomId
 generateRoomId = T.pack . take 10 . filter (\c -> isAscii c && isAlphaNum c) . randoms <$> getStdGen

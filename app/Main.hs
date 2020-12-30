@@ -6,5 +6,5 @@ import UI.Offline
 
 main :: IO ()
 main = do
-  _ <- M.defaultMain theApp initialState
+  _ <- M.defaultMain localApp initialGame
   return ()

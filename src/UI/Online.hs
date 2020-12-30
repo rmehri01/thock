@@ -1,33 +1,83 @@
 module UI.Online where
 
 import Brick
+  ( BrickEvent (AppEvent, VtyEvent),
+    EventM,
+    Next,
+    Widget,
+    showFirstCursor,
+    txt,
+    txtWrap,
+    vBox,
+    withAttr,
+    (<+>),
+    (<=>),
+  )
 import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
-import Control.Lens
-import Control.Monad.IO.Class
+import Control.Lens ((%~), (&), (+~), (.~), (^.))
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Graphics.Vty as V
 import Online
+  ( ClientMessage (BackToLobby, GameClientUpdate, RoomClientUpdate),
+    ConnectionTick (..),
+    GameClientState (GameClientState),
+    HasConnection (connection),
+    HasIsReady (isReady),
+    HasLocalGame (localGame),
+    HasOtherPlayers (otherPlayers),
+    HasProgress (progress),
+    HasWpm (wpm),
+    Online (..),
+    OnlineGameState (OnlineGameState),
+    RoomClientState (RoomClientState),
+    ServerMessage (GameUpdate, RoomUpdate, StartGame),
+    WaitingRoomState (WaitingRoomState),
+    sendJsonData,
+  )
 import Thock
-import UI.Attributes
+  ( HasRoomId (roomId),
+    HasUsername (username),
+    ResourceName,
+    calculateProgress,
+    calculateWpm,
+    initializeGameState,
+    isDone,
+    strokes,
+  )
+import UI.Attributes (attributeMap, primaryAttr, secondaryAttr)
 import UI.Common
+  ( addBorder,
+    drawFinished,
+    drawInput,
+    drawProgressBar,
+    drawProgressBarGameState,
+    drawPrompt,
+    updateGameState,
+  )
 
-onlineApp :: M.App OnlineGameState ConnectionTick ResourceName
+-- | Brick app for handling an 'Online' game
+onlineApp :: M.App Online ConnectionTick ResourceName
 onlineApp =
   M.App
-    { M.appDraw = drawOnlineState,
+    { M.appDraw = drawOnline,
       M.appChooseCursor = showFirstCursor,
-      M.appHandleEvent = handleKeyOnlineState,
+      M.appHandleEvent = handleKeyOnline,
       M.appStartEvent = return,
-      M.appAttrMap = const theMap
+      M.appAttrMap = const attributeMap
     }
 
-drawOnlineState :: OnlineGameState -> [Widget ResourceName]
-drawOnlineState s = case s of
-  WaitingRoomState w -> drawWaitingRoom w
-  OnlineGame o -> drawOnline o
+-- | Draws given 'Online' based on current state
+drawOnline :: Online -> [Widget ResourceName]
+drawOnline s = case s of
+  WaitingRoom w -> drawWaitingRoom w
+  OnlineGame o -> drawOnlineState o
 
-drawWaitingRoom :: WaitingRoom -> [Widget ResourceName]
-drawWaitingRoom (WaitingRoom room localSt _ ps) = [roomIdWidget <=> (playersDisplay <+> statusDisplay) <=> helpWidget]
+-- | Creates a waiting room widget which displays the 'RoomId',
+-- all connected players and their status, as well as a help section
+drawWaitingRoom :: WaitingRoomState -> [Widget ResourceName]
+drawWaitingRoom (WaitingRoomState room localSt _ ps) =
+  [roomIdWidget <=> (playersDisplay <+> statusDisplay) <=> helpWidget]
   where
     roomIdWidget = addBorder "room id" $ C.hCenter (txt room)
     playersDisplay =
@@ -43,8 +93,12 @@ drawWaitingRoom (WaitingRoom room localSt _ ps) = [roomIdWidget <=> (playersDisp
         else withAttr secondaryAttr (txt "not ready")
     allStates = localSt : ps
 
-drawOnline :: Online -> [Widget ResourceName]
-drawOnline o = [drawFinished g "Back to lobby: Esc", drawProgressBarGame g <=> otherProgressBars <=> drawPrompt g <=> drawInput g]
+-- | Creates a display with the local game state and the progress of other players
+drawOnlineState :: OnlineGameState -> [Widget ResourceName]
+drawOnlineState o =
+  [ drawFinished g "Back to lobby: Esc",
+    drawProgressBarGameState g <=> otherProgressBars <=> drawPrompt g <=> drawInput g
+  ]
   where
     otherProgressBars =
       vBox $
@@ -53,34 +107,37 @@ drawOnline o = [drawFinished g "Back to lobby: Esc", drawProgressBarGame g <=> o
           (o ^. otherPlayers)
     g = o ^. localGame
 
-handleKeyOnlineState :: OnlineGameState -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
-handleKeyOnlineState s ev = case s of
-  WaitingRoomState w -> handleKeyWaitingRoom w ev
-  OnlineGame o -> handleKeyOnline o ev
+-- | Handles an event based on current 'Online' state
+handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
+handleKeyOnline s ev = case s of
+  WaitingRoom w -> handleKeyWaitingRoom w ev
+  OnlineGame o -> handleKeyOnlineState o ev
 
-handleKeyWaitingRoom :: WaitingRoom -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
-handleKeyWaitingRoom (WaitingRoom room localSt conn _) (AppEvent (ConnectionTick csReceived)) =
+-- | Handles both local and 'ConnectionTick' events when the player is in a 'WaitingRoom'
+handleKeyWaitingRoom :: WaitingRoomState -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
+handleKeyWaitingRoom (WaitingRoomState room localSt conn _) (AppEvent (ConnectionTick csReceived)) =
   case csReceived of
-    RoomUpdate rs -> M.continue (WaitingRoomState $ WaitingRoom room localSt conn rs)
-    StartGame q gs -> M.continue (OnlineGame (Online (initializeGame q) room (localSt ^. username) conn gs))
+    RoomUpdate rs -> M.continue (WaitingRoom $ WaitingRoomState room localSt conn rs)
+    StartGame q gs -> M.continue (OnlineGame (OnlineGameState (initializeGameState q) room (localSt ^. username) conn gs))
     _ -> undefined
-handleKeyWaitingRoom (WaitingRoom room localSt conn ps) (VtyEvent ev) =
+handleKeyWaitingRoom (WaitingRoomState room localSt conn ps) (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt (WaitingRoomState $ WaitingRoom room localSt conn ps)
+    V.EvKey V.KEsc [] -> M.halt (WaitingRoom $ WaitingRoomState room localSt conn ps)
     V.EvKey (V.KChar 'r') [] -> do
       let newSt = localSt & isReady %~ not
       liftIO (sendJsonData conn (RoomClientUpdate newSt))
-      M.continue (WaitingRoomState $ WaitingRoom room newSt conn ps)
-    _ -> M.continue (WaitingRoomState $ WaitingRoom room localSt conn ps)
-handleKeyWaitingRoom (WaitingRoom room localSt conn ps) _ = M.continue (WaitingRoomState $ WaitingRoom room localSt conn ps)
+      M.continue (WaitingRoom $ WaitingRoomState room newSt conn ps)
+    _ -> M.continue (WaitingRoom $ WaitingRoomState room localSt conn ps)
+handleKeyWaitingRoom (WaitingRoomState room localSt conn ps) _ = M.continue (WaitingRoom $ WaitingRoomState room localSt conn ps)
 
-handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
-handleKeyOnline o (AppEvent (ConnectionTick csReceived)) =
+-- | Handles both local and 'ConnectionTick' events when the player is in an 'OnlineGame'
+handleKeyOnlineState :: OnlineGameState -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
+handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
   case csReceived of
-    RoomUpdate rs -> M.continue (WaitingRoomState $ WaitingRoom (o ^. roomId) (RoomClientState (o ^. username) False) (o ^. connection) rs)
+    RoomUpdate rs -> M.continue (WaitingRoom $ WaitingRoomState (o ^. roomId) (RoomClientState (o ^. username) False) (o ^. connection) rs)
     GameUpdate gs -> M.continue (OnlineGame $ o & otherPlayers .~ gs)
     _ -> undefined
-handleKeyOnline o (VtyEvent ev) =
+handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
     V.EvKey (V.KChar _) [] -> nextState (o & (localGame . strokes) +~ 1)
@@ -90,7 +147,7 @@ handleKeyOnline o (VtyEvent ev) =
       if isDone (o' ^. localGame)
         then M.continue (OnlineGame o')
         else do
-          updatedGame <- updateGame (o' ^. localGame) ev
+          updatedGame <- updateGameState (o' ^. localGame) ev
           let newClientState = GameClientState (o ^. username) (calculateProgress updatedGame) (calculateWpm updatedGame)
           _ <-
             liftIO $
@@ -98,4 +155,4 @@ handleKeyOnline o (VtyEvent ev) =
                 (o ^. connection)
                 (GameClientUpdate newClientState)
           M.continue (OnlineGame $ o' & localGame .~ updatedGame)
-handleKeyOnline o _ = M.continue (OnlineGame o)
+handleKeyOnlineState o _ = M.continue (OnlineGame o)
