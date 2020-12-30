@@ -45,7 +45,7 @@ import Thock
     isDone,
     strokes,
   )
-import UI.Attributes (attributeMap, primaryAttr, secondaryAttr)
+import UI.Attributes (attributeMap, redAttr, secondaryAttr)
 import UI.Common
   ( addBorder,
     drawFinished,
@@ -89,8 +89,8 @@ drawWaitingRoom (WaitingRoomState room localSt _ ps) =
     helpWidget = addBorder "help" $ C.hCenter (txtWrap "Press 'r' to ready up! Once everyone is ready, the match will begin.")
     makeReadyTxt ready =
       if ready
-        then withAttr primaryAttr (txt "ready")
-        else withAttr secondaryAttr (txt "not ready")
+        then withAttr secondaryAttr (txt "ready")
+        else withAttr redAttr (txt "not ready")
     allStates = localSt : ps
 
 -- | Creates a display with the local game state and the progress of other players

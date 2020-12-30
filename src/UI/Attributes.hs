@@ -30,6 +30,10 @@ correctAttr = A.attrName "correct"
 incorrectAttr :: A.AttrName
 incorrectAttr = A.attrName "incorrect"
 
+-- | Attribute for styling red text
+redAttr :: A.AttrName
+redAttr = A.attrName "red"
+
 -- | Map from an attribute to its corresponding styling for all attributes
 attributeMap :: A.AttrMap
 attributeMap =
@@ -40,5 +44,6 @@ attributeMap =
       (L.listSelectedAttr, fg secondaryColor `V.withStyle` V.bold),
       (P.progressCompleteAttr, V.white `on` primaryColor),
       (correctAttr, fg V.green),
-      (incorrectAttr, bg V.red)
+      (incorrectAttr, bg V.red),
+      (redAttr, fg (V.rgbColor 195 39 (43 :: Int)))
     ]
