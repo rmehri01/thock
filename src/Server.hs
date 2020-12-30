@@ -56,11 +56,11 @@ data ServerState = ServerState
 makeLenses ''ServerState
 
 -- | Runs the websocket server with a random quote and initial state
-runServer :: IO ()
-runServer = do
+runServer :: Int -> IO ()
+runServer port = do
   q <- generateQuote
   st <- newMVar (newServerState q)
-  WS.runServer "127.0.0.1" 9160 $ serverApp st
+  WS.runServer "0.0.0.0" port $ serverApp st
 
 -- | Handles interacting with incoming client connections
 serverApp :: MVar ServerState -> WS.ServerApp

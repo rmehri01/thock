@@ -57,4 +57,6 @@ createClientApp isCreating formData@(RoomFormData (Username user) room) conn = d
 
 -- | Connects to the websocket server and runs the client app
 runClient :: Bool -> RoomFormData -> IO (Maybe T.Text)
-runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createClientApp isCreating formData)
+runClient isCreating formData =
+  withSocketsDo $
+    WS.runClient "thock-server.herokuapp.com" 80 "/" (createClientApp isCreating formData)
