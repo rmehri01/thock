@@ -34,10 +34,10 @@ listDrawElement sel t = C.hCenter $ txt symbol <+> txt t
         else "  "
 
 drawPractice :: Game -> [Widget ResourceName]
-drawPractice g = [drawFinished g, drawProgressBarGame g <=> drawPrompt g <=> drawInput g]
+drawPractice g = [drawFinished g "Back: Esc | Retry: ^r | Next: ^n", drawProgressBarGame g <=> drawPrompt g <=> drawInput g]
 
-drawFinished :: Game -> Widget ResourceName
-drawFinished g = if isDone g then doneWidget else emptyWidget
+drawFinished :: Game -> T.Text -> Widget ResourceName
+drawFinished g help = if isDone g then doneWidget else emptyWidget
   where
     doneWidget = C.centerLayer . hLimitPercent 90 $ addBorder "stats" (stats <=> B.hBorder <=> instructions)
     stats = speedStat <=> accuracyStat <=> timeStat <=> sourceStat
@@ -45,7 +45,7 @@ drawFinished g = if isDone g then doneWidget else emptyWidget
     accuracyStat = makeStatWidget "Accuracy: " (drawFloatWithSuffix 1 "%" (accuracy g * 100))
     timeStat = makeStatWidget "Time elapsed: " (drawFloatWithSuffix 1 " seconds" (secondsElapsed g))
     sourceStat = makeStatWidget "Quote source: " (txtWrap $ g ^. (quote . source))
-    instructions = C.hCenter (txt "Back: Esc | Retry: ^r | Next: ^n")
+    instructions = C.hCenter (txt help)
     makeStatWidget t w = vLimit 1 (hLimit 15 (withAttr secondaryAttr (txt t) <+> fill ' ') <+> w)
 
 drawProgressBarGame :: Game -> Widget ResourceName

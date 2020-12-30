@@ -44,7 +44,7 @@ drawWaitingRoom (WaitingRoom room localSt _ ps) = [roomIdWidget <=> (playersDisp
     allStates = localSt : ps
 
 drawOnline :: Online -> [Widget ResourceName]
-drawOnline o = [drawFinished g, drawProgressBarGame g <=> otherProgressBars <=> drawPrompt g <=> drawInput g]
+drawOnline o = [drawFinished g "Back to lobby: Esc", drawProgressBarGame g <=> otherProgressBars <=> drawPrompt g <=> drawInput g]
   where
     otherProgressBars =
       vBox $
@@ -62,8 +62,8 @@ handleKeyWaitingRoom :: WaitingRoom -> BrickEvent ResourceName ConnectionTick ->
 handleKeyWaitingRoom (WaitingRoom room localSt conn _) (AppEvent (ConnectionTick csReceived)) =
   case csReceived of
     RoomUpdate rs -> M.continue (WaitingRoomState $ WaitingRoom room localSt conn rs)
-    StartGame q gs -> M.continue (OnlineGame (Online (initializeGame q) (localSt ^. username) conn gs))
-    _ -> error "undefined behaviour"
+    StartGame q gs -> M.continue (OnlineGame (Online (initializeGame q) room (localSt ^. username) conn gs))
+    _ -> undefined
 handleKeyWaitingRoom (WaitingRoom room localSt conn ps) (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (WaitingRoomState $ WaitingRoom room localSt conn ps)
@@ -75,11 +75,14 @@ handleKeyWaitingRoom (WaitingRoom room localSt conn ps) (VtyEvent ev) =
 handleKeyWaitingRoom (WaitingRoom room localSt conn ps) _ = M.continue (WaitingRoomState $ WaitingRoom room localSt conn ps)
 
 handleKeyOnline :: Online -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next OnlineGameState)
-handleKeyOnline o (AppEvent (ConnectionTick (GameUpdate csReceived))) = do
-  M.continue (OnlineGame $ o & otherPlayers .~ filter (\cs -> cs ^. username /= o ^. username) csReceived)
+handleKeyOnline o (AppEvent (ConnectionTick csReceived)) =
+  case csReceived of
+    RoomUpdate rs -> M.continue (WaitingRoomState $ WaitingRoom (o ^. roomId) (RoomClientState (o ^. username) False) (o ^. connection) rs)
+    GameUpdate gs -> M.continue (OnlineGame $ o & otherPlayers .~ gs)
+    _ -> undefined
 handleKeyOnline o (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt (OnlineGame o)
+    V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
     V.EvKey (V.KChar _) [] -> nextState (o & (localGame . strokes) +~ 1)
     _ -> nextState o
   where

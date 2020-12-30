@@ -57,6 +57,7 @@ makeFieldsNoPrefix ''GameClient
 data ClientToServerMessage
   = RoomClientUpdate RoomClientState
   | GameClientUpdate GameClientState
+  | BackToLobby T.Text
   deriving (Generic)
 
 instance FromJSON ClientToServerMessage
@@ -77,6 +78,7 @@ newtype ConnectionTick = ConnectionTick ServerToClientMessage
 
 data Online = Online
   { _localGame :: Game,
+    _roomId :: RoomId,
     _username :: T.Text,
     _connection :: WS.Connection,
     _otherPlayers :: [GameClientState]
