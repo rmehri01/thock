@@ -1,3 +1,4 @@
+-- | This module provides the UI for a game once an online connection is established.
 module UI.Online where
 
 import Brick

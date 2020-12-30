@@ -4,9 +4,10 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | This module has shared types and functions for communication between the websocket client and server.
 module Online where
 
-import Control.Lens (makeFieldsNoPrefix, (^.))
+import Control.Lens (makeFieldsNoPrefix)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
@@ -126,7 +127,3 @@ sendJsonData conn a = WS.sendTextData conn (encode a)
 -- Produces an error if the JSON fails to decode (malformed or wrong type).
 receiveJsonData :: FromJSON a => WS.Connection -> IO a
 receiveJsonData conn = fromMaybe (error "could not decode JSON message into desired type") . decode <$> WS.receiveData conn
-
--- | Produces true if there is more than one person in the room and they are all ready
-canStart :: [RoomClientState] -> Bool
-canStart rs = length rs > 1 && all (^. isReady) rs

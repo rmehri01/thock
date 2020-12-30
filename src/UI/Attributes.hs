@@ -1,3 +1,4 @@
+-- | This module provides attributes and styling for use within the UI.
 module UI.Attributes where
 
 import qualified Brick.AttrMap as A

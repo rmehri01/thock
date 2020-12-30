@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | This module deals with maintaining the state of the server when receiving updates.
 module Server where
 
 import Control.Concurrent
@@ -22,7 +23,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
 import Online
-  ( ClientMessage
+  (HasIsReady(isReady),  ClientMessage
       ( BackToLobby,
         GameClientUpdate,
         RoomClientUpdate
@@ -34,7 +35,6 @@ import Online
     RoomClient (RoomClient),
     RoomClientState (RoomClientState),
     ServerMessage (GameUpdate, RoomUpdate, StartGame),
-    canStart,
     receiveJsonData,
     sendJsonData,
   )
@@ -55,19 +55,16 @@ data ServerState = ServerState
 
 makeLenses ''ServerState
 
-main :: IO ()
-main = runServer
-
 -- | Runs the websocket server with a random quote and initial state
 runServer :: IO ()
 runServer = do
   q <- generateQuote
   st <- newMVar (newServerState q)
-  WS.runServer "127.0.0.1" 9160 $ application st
+  WS.runServer "127.0.0.1" 9160 $ serverApp st
 
 -- | Handles interacting with incoming client connections
-application :: MVar ServerState -> WS.ServerApp
-application mState pending = do
+serverApp :: MVar ServerState -> WS.ServerApp
+serverApp mState pending = do
   conn <- WS.acceptRequest pending
   WS.withPingThread conn 30 (return ()) $ do
     (RoomFormData (Username user) room, isCreating) <- receiveJsonData conn
@@ -254,3 +251,7 @@ deleteFirstWhere p (a : as) = if p a then as else a : deleteFirstWhere p as
 -- | Produces true if the inner state's username is equal to the given user
 equalOnStateUsername :: (Eq a1, HasState s a2, HasUsername a2 a1) => a1 -> s -> Bool
 equalOnStateUsername user c = (c ^. (state . username)) == user
+
+-- | Produces true if there is more than one person in the room and they are all ready
+canStart :: [RoomClientState] -> Bool
+canStart rs = length rs > 1 && all (^. isReady) rs

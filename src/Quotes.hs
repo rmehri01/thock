@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | This module provides a way to deal with quotes which are used as prompts.
 module Quotes where
 
 import Control.Lens (makeLenses)

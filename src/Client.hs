@@ -1,3 +1,4 @@
+-- | This module allows a client to connect to and interact with the websocket server.
 module Client
   ( runClient,
   )
@@ -24,8 +25,8 @@ import UI.Online (onlineApp)
 
 -- | Sets up the initial state of the 'Online' state using the formData
 -- based on if the player is creating the room.
-createApp :: Bool -> RoomFormData -> WS.ClientApp (Maybe T.Text)
-createApp isCreating formData@(RoomFormData (Username user) room) conn = do
+createClientApp :: Bool -> RoomFormData -> WS.ClientApp (Maybe T.Text)
+createClientApp isCreating formData@(RoomFormData (Username user) room) conn = do
   _ <- sendJsonData conn (formData, isCreating)
 
   if isCreating
@@ -56,4 +57,4 @@ createApp isCreating formData@(RoomFormData (Username user) room) conn = do
 
 -- | Connects to the websocket server and runs the client app
 runClient :: Bool -> RoomFormData -> IO (Maybe T.Text)
-runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createApp isCreating formData)
+runClient isCreating formData = withSocketsDo $ WS.runClient "127.0.0.1" 9160 "/" (createClientApp isCreating formData)

@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+-- | This module provides the core data and functionality for handling the game.
 module Thock where
 
 import Brick.Forms (Form)

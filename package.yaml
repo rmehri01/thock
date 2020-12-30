@@ -11,8 +11,8 @@ extra-source-files:
 - ChangeLog.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Game
+synopsis:            A modern TUI typing test featuring online racing against friends.
+category:            Game
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -54,14 +54,14 @@ executables:
     dependencies:
     - thock
   server:
-    main:                Server.hs
+    main:                ServerMain.hs
     source-dirs:         app
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     - -Wall
-    - -main-is Server
+    - -main-is ServerMain
     dependencies:
     - thock
 

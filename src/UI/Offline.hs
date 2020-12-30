@@ -1,3 +1,4 @@
+-- | This module has deals with UI specific to the offline game and for transitioning to online.
 module UI.Offline where
 
 import Brick

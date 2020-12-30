@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | This module has common functionality that is used in both the offline and online UIs.
 module UI.Common where
 
 import Brick
