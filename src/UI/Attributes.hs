@@ -12,7 +12,7 @@ primaryAttr = A.attrName "primary"
 
 -- | The main color used for styling the UI
 primaryColor :: V.Color
-primaryColor = V.rgbColor 186 255 (201 :: Int)
+primaryColor = V.rgbColor 64 122 (82 :: Int)
 
 -- | The secondary attribute used for styling the UI
 secondaryAttr :: A.AttrName
@@ -20,7 +20,7 @@ secondaryAttr = A.attrName "secondary"
 
 -- | The secondary color used for styling the UI
 secondaryColor :: V.Color
-secondaryColor = V.rgbColor 255 255 (186 :: Int)
+secondaryColor = V.rgbColor 0 100 (66 :: Int)
 
 -- | The attribute for styling correctly typed text
 correctAttr :: A.AttrName
@@ -34,13 +34,11 @@ incorrectAttr = A.attrName "incorrect"
 attributeMap :: A.AttrMap
 attributeMap =
   A.attrMap
-    (V.withBackColor V.defAttr V.black)
+    V.defAttr
     [ (primaryAttr, fg primaryColor),
       (secondaryAttr, fg secondaryColor),
-      (L.listAttr, fg V.white),
       (L.listSelectedAttr, fg secondaryColor `V.withStyle` V.bold),
-      (P.progressCompleteAttr, V.black `on` V.white),
-      (P.progressIncompleteAttr, V.white `on` V.black),
+      (P.progressCompleteAttr, V.white `on` primaryColor),
       (correctAttr, fg V.green),
       (incorrectAttr, bg V.red)
     ]
