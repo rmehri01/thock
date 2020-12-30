@@ -1,90 +1,132 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Online where
 
-import Data.Aeson
-import Data.Maybe
+import Control.Lens (makeFieldsNoPrefix, (^.))
+import Data.Aeson (FromJSON, ToJSON, decode, encode)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
-import GHC.Generics
-import Lens.Micro
-import Lens.Micro.TH
+import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
-import Quotes
-import Thock
+import Quotes (Quote)
+import Thock (GameState, HasRoomId (..), HasUsername (..), RoomId)
 
--- TODO: different module?
-
-data RoomClientState = RoomClientState {_clientUsername :: T.Text, _isReady :: Bool}
+-- | The state of a client in a waiting room
+data RoomClientState = RoomClientState
+  { _username :: T.Text,
+    _isReady :: Bool
+  }
   deriving (Generic)
 
-makeLenses ''RoomClientState
+makeFieldsNoPrefix ''RoomClientState
 
-instance FromJSON RoomClientState where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1} -- TODO: field modifiers might not be needed
+instance FromJSON RoomClientState
 
-instance ToJSON RoomClientState where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON RoomClientState
 
-data GameClientState = GameClientState {_clientName :: T.Text, _clientProgress :: Float, _clientWpm :: Double} -- TODO: overlapping, make better use of lens
+-- | The state of a client in an online game
+data GameClientState = GameClientState
+  { _username :: T.Text,
+    _progress :: Float,
+    _wpm :: Double
+  }
   deriving (Generic)
 
-makeLenses ''GameClientState
+makeFieldsNoPrefix ''GameClientState
 
-instance FromJSON GameClientState where
-  parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+instance FromJSON GameClientState
 
-instance ToJSON GameClientState where
-  toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON GameClientState
 
-data RoomClient = RoomClient {_roomState :: RoomClientState, _roomConnection :: WS.Connection}
+-- | A waiting room client with a state and connection to the server
+data RoomClient = RoomClient
+  { _state :: RoomClientState,
+    _connection :: WS.Connection
+  }
 
-makeLenses ''RoomClient
+makeFieldsNoPrefix ''RoomClient
 
-data GameClient = GameClient {_state :: GameClientState, _connection :: WS.Connection}
+-- | An in-game client with a state and connection to the server
+data GameClient = GameClient
+  { _state :: GameClientState,
+    _connection :: WS.Connection
+  }
 
-makeLenses ''GameClient
+makeFieldsNoPrefix ''GameClient
 
-data ClientToServerMessage
+-- | A message that a client sends to the server to update their state
+data ClientMessage
   = RoomClientUpdate RoomClientState
   | GameClientUpdate GameClientState
+  | BackToLobby T.Text
   deriving (Generic)
 
-instance FromJSON ClientToServerMessage
+instance FromJSON ClientMessage
 
-instance ToJSON ClientToServerMessage
+instance ToJSON ClientMessage
 
-data ServerToClientMessage
+-- | A message from the server that updates a client on the state of other clients
+data ServerMessage
   = RoomUpdate [RoomClientState]
-  | -- | JoinRoomConfirmation (Maybe [RoomClientState])
-    GameUpdate [GameClientState]
+  | GameUpdate [GameClientState]
   | StartGame Quote [GameClientState]
   deriving (Generic)
 
-instance FromJSON ServerToClientMessage
+instance FromJSON ServerMessage
 
-instance ToJSON ServerToClientMessage
+instance ToJSON ServerMessage
 
-newtype ConnectionTick = ConnectionTick ServerToClientMessage
+-- | Custom event that triggers when the client receives a 'ServerMessage'
+newtype ConnectionTick = ConnectionTick ServerMessage
 
-data Online = Online {_localGame :: Game, _onlineName :: T.Text, _onlineConnection :: WS.Connection, _clientStates :: [GameClientState]}
+-- | The state of a player waiting to start an online game
+data WaitingRoomState = WaitingRoomState
+  { -- | Which room the player is in
+    _roomId :: RoomId,
+    -- | Information about the player
+    _localState :: RoomClientState,
+    -- | The player's connection to the server
+    _connection :: WS.Connection,
+    -- | The states of other players
+    _otherPlayers :: [RoomClientState]
+  }
 
-makeLenses ''Online
+makeFieldsNoPrefix ''WaitingRoomState
 
-data OnlineGameState
-  = WaitingRoom {_roomId :: RoomId, _localState :: RoomClientState, _waitingRoomConnection :: WS.Connection, _otherPlayers :: [RoomClientState]}
-  | OnlineGame Online
+-- | The state of a player's online game
+data OnlineGameState = OnlineGameState
+  { -- | The state of the player's personal game
+    _localGame :: GameState,
+    -- | Room to return to after the game is done
+    _roomId :: RoomId,
+    -- | The player's username
+    _username :: T.Text,
+    -- | The player's connection to the server
+    _connection :: WS.Connection,
+    -- | The states of other players
+    _otherPlayers :: [GameClientState]
+  }
 
-makeLenses ''OnlineGameState
+makeFieldsNoPrefix ''OnlineGameState
 
-initialOnline :: Quote -> T.Text -> WS.Connection -> Online
-initialOnline q name conn = Online {_localGame = initializeGame q, _onlineName = name, _onlineConnection = conn, _clientStates = []}
+-- | The current status of the online connection
+data Online
+  = WaitingRoom WaitingRoomState
+  | OnlineGame OnlineGameState
 
+-- | Sends the given data over the connection as text using 'encode'
 sendJsonData :: ToJSON a => WS.Connection -> a -> IO ()
 sendJsonData conn a = WS.sendTextData conn (encode a)
 
+-- | Receives JSON text data from the connection and tries to 'decode' it into the given type.
+-- Produces an error if the JSON fails to decode (malformed or wrong type).
 receiveJsonData :: FromJSON a => WS.Connection -> IO a
 receiveJsonData conn = fromMaybe (error "could not decode JSON message into desired type") . decode <$> WS.receiveData conn
 
+-- | Produces true if there is more than one person in the room and they are all ready
 canStart :: [RoomClientState] -> Bool
 canStart rs = length rs > 1 && all (^. isReady) rs
