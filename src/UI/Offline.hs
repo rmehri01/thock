@@ -1,3 +1,4 @@
+-- | This module has deals with UI specific to the offline game and for transitioning to online.
 module UI.Offline where
 
 import Brick
@@ -54,7 +55,7 @@ import Thock
     strokes,
     value,
   )
-import UI.Attributes (attributeMap, secondaryAttr)
+import UI.Attributes (attributeMap, redAttr, secondaryAttr)
 import UI.Common
   ( addBorder,
     drawFinished,
@@ -114,15 +115,15 @@ drawPractice g =
 drawError :: Game -> T.Text -> [Widget ResourceName]
 drawError g t = errorPopup : drawGame g
   where
-    errorPopup = C.centerLayer . hLimitPercent 80 . withAttr secondaryAttr $ addBorder "error" (txtWrap t)
+    errorPopup = C.centerLayer . hLimitPercent 80 . addBorder "error" $ withAttr redAttr (txtWrap t)
 
 -- | Handles events based on the current state of the 'Game'
 handleKeyGame :: Game -> BrickEvent ResourceName () -> EventM ResourceName (Next Game)
 handleKeyGame gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
   OnlineSelect l -> handleKeyOnlineSelect l ev
-  CreateRoomMenu form -> handleKeyForm CreateRoomMenu (\u -> generateRoomId >>= runClient True . RoomFormData u) form ev
-  JoinRoomMenu form -> handleKeyForm JoinRoomMenu (runClient False) form ev
+  CreateRoomMenu form -> handleKeyForm CreateRoomMenu (\u -> generateRoomId >>= runClient True . RoomFormData u) (^. value) form ev
+  JoinRoomMenu form -> handleKeyForm JoinRoomMenu (runClient False) (^. (username . value)) form ev
   Practice g -> handleKeyPractice g ev
   ErrorOverlay prev _ -> M.continue prev -- after receiving any event, remove the error overlay
 
@@ -155,22 +156,27 @@ handleKeyOnlineSelect l (VtyEvent e) = case e of
   ev -> L.handleListEvent ev l >>= M.continue . OnlineSelect
 handleKeyOnlineSelect l _ = M.continue (OnlineSelect l)
 
--- | Handles a key event for a form
+-- | Handles a key event for a form and its validation
 handleKeyForm ::
   -- | Function to construct a Game from the given form
   (RoomForm a -> Game) ->
   -- | Action to run when the form is submitted, returns a possible error
   (a -> IO (Maybe T.Text)) ->
+  -- | Function to get the username from the given form
+  (a -> T.Text) ->
   RoomForm a ->
   BrickEvent ResourceName () ->
   EventM ResourceName (Next Game)
-handleKeyForm ctr onEnter form ev@(VtyEvent e) = case e of
+handleKeyForm ctr onEnter getUser form ev@(VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.continue initialGame
   V.EvKey V.KEnter [] ->
-    M.suspendAndResume
-      (maybe initialGame (ErrorOverlay (ctr form)) <$> onEnter (formState form))
+    if not . T.null $ getUser (formState form)
+      then
+        M.suspendAndResume
+          (maybe initialGame (ErrorOverlay (ctr form)) <$> onEnter (formState form))
+      else M.continue (ErrorOverlay (ctr form) "username cannot be empty")
   _ -> handleFormEvent ev form >>= M.continue . ctr
-handleKeyForm ctr _ form _ = M.continue (ctr form)
+handleKeyForm ctr _ _ form _ = M.continue (ctr form)
 
 -- | Construct a 'RoomForm' with the given 'Username' as the initial state
 makeCreateRoomForm :: Username -> RoomForm Username
