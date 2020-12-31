@@ -41,12 +41,6 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
 
-      - uses: actions/cache@v2
-        name: Cache ~/.stack
-        with:
-          path: ~/.stack
-          key: ${{ runner.os }}-stack
-
       - name: Build project
         id: build_project
         run: |
