@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3578940c332c49e044c3fc970683e95f1998817ba1184134bb9347284b4e1dfd
+-- hash: c91f36bf4b2fe28229da48414108d1915a433f3822f21b361911bb87e49a9e5c
 
 name:           thock
 version:        0.1.0.0
@@ -97,7 +97,7 @@ executable thock
   hs-source-dirs:
       app
   default-extensions: OverloadedStrings
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
+  ghc-options: -O3 -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson
     , base >=4.7 && <5
