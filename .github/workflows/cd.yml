@@ -9,6 +9,8 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.step_upload_url.outputs.upload_url }}
     steps:
       - uses: actions/checkout@v2
       - name: Create Release
@@ -21,6 +23,8 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: true
           prerelease: false
+      - id: step_upload_url
+        run: echo "::set-output name=upload_url::${{ steps.create_release.outputs.upload_url }}"
 
   build:
     needs: [create_release]
@@ -37,6 +41,12 @@ jobs:
           enable-stack: true
           stack-version: 'latest'
 
+      - uses: actions/cache@v2
+        name: Cache ~/.stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-stack
+
       - name: Build project
         run: |
           stack build --test --copy-bins
@@ -47,7 +57,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./thock
           asset_name: thock
           asset_content_type: application/octet-stream
