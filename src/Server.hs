@@ -23,7 +23,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
 import Online
-  (HasIsReady(isReady),  ClientMessage
+  ( ClientMessage
       ( BackToLobby,
         GameClientUpdate,
         RoomClientUpdate
@@ -31,6 +31,7 @@ import Online
     GameClient (GameClient),
     GameClientState (GameClientState),
     HasConnection (..),
+    HasIsReady (isReady),
     HasState (..),
     RoomClient (RoomClient),
     RoomClientState (RoomClientState),
@@ -38,7 +39,7 @@ import Online
     receiveJsonData,
     sendJsonData,
   )
-import Quotes (Quote, generateQuote)
+import Quotes (generateQuote)
 import Thock
   ( HasUsername (..),
     RoomFormData (RoomFormData),
@@ -47,8 +48,7 @@ import Thock
   )
 
 data ServerState = ServerState
-  { _serverQuote :: Quote,
-    _rooms :: Map RoomId [RoomClient],
+  { _rooms :: Map RoomId [RoomClient],
     _activeGames :: Map RoomId [GameClient]
   }
   deriving (Generic)
@@ -58,8 +58,7 @@ makeLenses ''ServerState
 -- | Runs the websocket server with a random quote and initial state
 runServer :: Int -> IO ()
 runServer port = do
-  q <- generateQuote
-  st <- newMVar (newServerState q)
+  st <- newMVar newServerState
   WS.runServer "0.0.0.0" port $ serverApp st
 
 -- | Handles interacting with incoming client connections
@@ -111,7 +110,8 @@ talk conn mState room = forever $ do
         then do
           newS <- modifyMVar mState $ \s -> do
             let s' = makeActive room s in return (s', s')
-          broadcastTo id room (StartGame (newS ^. serverQuote)) (newS ^. activeGames)
+          q <- generateQuote
+          broadcastTo id room (StartGame q) (newS ^. activeGames)
         else roomBroadcastExceptSending room (r ^. username) ss
     GameClientUpdate g -> do
       s <- modifyMVar mState $ \s ->
@@ -129,9 +129,9 @@ talk conn mState room = forever $ do
       gameBroadcastExceptSending room user s
       roomBroadcastExceptSending room user s
 
--- | Creates the initial 'ServerState' with the given 'Quote'
-newServerState :: Quote -> ServerState
-newServerState q = ServerState {_serverQuote = q, _rooms = Map.empty, _activeGames = Map.empty}
+-- | Creates the initial 'ServerState' with empty rooms and games
+newServerState :: ServerState
+newServerState = ServerState {_rooms = Map.empty, _activeGames = Map.empty}
 
 -- | Adds a 'RoomClient' into the given waiting room
 addRoomClient :: RoomId -> RoomClient -> ServerState -> ServerState

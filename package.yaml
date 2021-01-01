@@ -11,7 +11,7 @@ extra-source-files:
 - ChangeLog.md
 
 # Metadata used when publishing your package
-synopsis:            A modern TUI typing test featuring online racing against friends.
+synopsis:            A modern TUI typing game featuring online racing against friends.
 category:            Game
 
 # To avoid duplicated efforts in documentation and dealing with the
