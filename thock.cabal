@@ -4,8 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
-
--- hash: e55265cc96dec1884d61436c37dc9c04b201fa0ddb3250005cbe551884fecba7
+-- hash: 890360ddce4c383c65caad559cf5f257955b12d02f2f3e67ead117d2d206f7c3
 
 name:           thock
 version:        0.1.0.0
