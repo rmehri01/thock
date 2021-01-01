@@ -37,10 +37,6 @@ jobs:
       - name: Check out
         uses: actions/checkout@v2
 
-      - name: Install upx on macOS
-        if: matrix.os_name == 'macos'
-        run: brew install upx
-
       - name: Cache ~/.stack folder
         uses: actions/cache@v2
         with:
