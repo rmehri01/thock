@@ -7,12 +7,10 @@ name: Create Release
 
 jobs:
   create_release:
-    name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.step_upload_url.outputs.upload_url }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v2
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -23,18 +21,46 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: true
           prerelease: false
-      - id: step_upload_url
-        run: echo "::set-output name=upload_url::${{ steps.create_release.outputs.upload_url }}"
 
   build:
-    needs: [create_release]
+    needs: create_release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        include:
+        - os: ubuntu-latest
+          os_name: linux
+        - os: macos-latest
+          os_name: macos
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out
+        uses: actions/checkout@v2
+
+      - name: Cache ~/.stack folder
+        uses: actions/cache@v2
+        with:
+          path: ~/.stack
+          key: stack-global-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-global
+
+      - name: Cache ~/.local/bin folder
+        uses: actions/cache@v2
+        with:
+          path: ~/.local/bin
+          key: stack-local-bin-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-local-bin
+
+      - name: Cache .stack-work folder
+        uses: actions/cache@v2
+        with:
+          path: .stack-work
+          key: stack-work-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-work
+
       - uses: haskell/actions/setup@v1
         with:
           ghc-version: '8.8.4' # Exact version of ghc to use
@@ -42,11 +68,18 @@ jobs:
           stack-version: 'latest'
 
       - name: Build project
-        id: build_project
         run: |
-          stack build --test
-          export STACK_PATH=$(stack path --local-install-root)
-          echo ::set-output name=ARTIFACT_PATH::$STACK_PATH/bin/thock
+          stack install --test
+          mv ~/.local/bin/thock .
+
+      - name: Reduce size of executable
+        uses: svenstaro/upx-action@v2
+        with:
+          file: thock
+          args: "-9"
+
+      - name: Compress executable
+        run: tar czf thock.tar.gz thock
 
       - name: Upload Release Asset
         id: upload-release-asset 
@@ -55,6 +88,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.build_project.outputs.ARTIFACT_PATH }}
-          asset_name: thock-${{ runner.os }}
-          asset_content_type: application/octet-stream
+          asset_path: thock.tar.gz
+          asset_name: thock-${{ matrix.os_name }}.tar.gz
+          asset_content_type: application/gzip
