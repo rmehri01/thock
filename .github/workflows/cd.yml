@@ -72,14 +72,18 @@ jobs:
           stack-version: 'latest'
 
       - name: Build project
-        run: stack install --test
+        run: |
+          stack install --test
+          mv ~/.local/bin/thock .
+
+      - name: Reduce size of executable
+        uses: svenstaro/upx-action@v2
+        with:
+          file: thock
+          args: "-9"
 
       - name: Compress executable
-        run: |
-          mv ~/.local/bin/thock .
-          strip thock
-          upx -9 thock
-          tar czf thock.tar.gz thock
+        run: tar czf thock.tar.gz thock
 
       - name: Upload Release Asset
         id: upload-release-asset 
