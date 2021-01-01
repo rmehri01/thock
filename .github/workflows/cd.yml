@@ -41,25 +41,25 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.stack
-          key: stack-global-${{hashFiles('**.yaml')}}
+          key: stack-global-${{ matrix.os_name }}-${{hashFiles('**.yaml')}}
           restore-keys: |
-            stack-global
+            stack-global-${{ matrix.os_name }}
 
       - name: Cache ~/.local/bin folder
         uses: actions/cache@v2
         with:
           path: ~/.local/bin
-          key: stack-local-bin-${{hashFiles('**.yaml')}}
+          key: stack-local-bin-${{ matrix.os_name }}-${{hashFiles('**.yaml')}}
           restore-keys: |
-            stack-local-bin
+            stack-local-bin-${{ matrix.os_name }}
 
       - name: Cache .stack-work folder
         uses: actions/cache@v2
         with:
           path: .stack-work
-          key: stack-work-${{hashFiles('**.yaml')}}
+          key: stack-work-${{ matrix.os_name }}-${{hashFiles('**.yaml')}}
           restore-keys: |
-            stack-work
+            stack-work-${{ matrix.os_name }}
 
       - uses: haskell/actions/setup@v1
         with:
