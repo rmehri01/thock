@@ -1,4 +1,4 @@
-module ServerMain where
+module Main where
 
 import Server (runServer)
 import System.Environment (getEnv)

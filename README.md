@@ -1,5 +1,7 @@
 # thock
 
+[![Hackage](https://img.shields.io/hackage/v/thock.svg)](https://hackage.haskell.org/package/thock)
+
 ![An example of an online game](resources/demo.gif)
 
 ## Installation

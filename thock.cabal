@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 890360ddce4c383c65caad559cf5f257955b12d02f2f3e67ead117d2d206f7c3
+-- hash: 81d1d1005d8eba4dd8ebed3ea7e1b1d47dcf5e6f7e900095e95e3dfe9d375547
 
 name:           thock
-version:        0.1.0.0
+version:        0.2.0.0
 synopsis:       A modern TUI typing game featuring online racing against friends.
 description:    Please see the README on GitHub at <https://github.com/rmehri01/thock#readme>
 category:       Game
@@ -44,77 +44,75 @@ library
       src
   default-extensions: OverloadedStrings
   build-depends:
-      aeson
+      aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
-    , brick
-    , containers
-    , file-embed
-    , lens
-    , mtl
-    , network
-    , random
-    , text
-    , text-zipper
-    , time
-    , vector
-    , vty
-    , websockets
+    , brick >=0.52.1 && <0.53
+    , containers >=0.6.2.1 && <0.7
+    , file-embed >=0.0.11.2 && <0.1
+    , lens >=4.18.1 && <4.19
+    , mtl >=2.2.2 && <2.3
+    , network >=3.1.1.1 && <3.2
+    , random ==1.1.*
+    , text >=1.2.4.0 && <1.3
+    , text-zipper >=0.10.1 && <0.11
+    , time >=1.9.3 && <1.10
+    , vector >=0.12.1.2 && <0.13
+    , vty >=5.28.2 && <5.29
+    , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
 executable server
-  main-is: ServerMain.hs
+  main-is: server/Main.hs
   other-modules:
-      Main
       Paths_thock
   hs-source-dirs:
       app
   default-extensions: OverloadedStrings
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -main-is ServerMain
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      aeson
+      aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
-    , brick
-    , containers
-    , file-embed
-    , lens
-    , mtl
-    , network
-    , random
-    , text
-    , text-zipper
+    , brick >=0.52.1 && <0.53
+    , containers >=0.6.2.1 && <0.7
+    , file-embed >=0.0.11.2 && <0.1
+    , lens >=4.18.1 && <4.19
+    , mtl >=2.2.2 && <2.3
+    , network >=3.1.1.1 && <3.2
+    , random ==1.1.*
+    , text >=1.2.4.0 && <1.3
+    , text-zipper >=0.10.1 && <0.11
     , thock
-    , time
-    , vector
-    , vty
-    , websockets
+    , time >=1.9.3 && <1.10
+    , vector >=0.12.1.2 && <0.13
+    , vty >=5.28.2 && <5.29
+    , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
 executable thock
-  main-is: Main.hs
+  main-is: thock/Main.hs
   other-modules:
-      ServerMain
       Paths_thock
   hs-source-dirs:
       app
   default-extensions: OverloadedStrings
   ghc-options: -O3 -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      aeson
+      aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
-    , brick
-    , containers
-    , file-embed
-    , lens
-    , mtl
-    , network
-    , random
-    , text
-    , text-zipper
+    , brick >=0.52.1 && <0.53
+    , containers >=0.6.2.1 && <0.7
+    , file-embed >=0.0.11.2 && <0.1
+    , lens >=4.18.1 && <4.19
+    , mtl >=2.2.2 && <2.3
+    , network >=3.1.1.1 && <3.2
+    , random ==1.1.*
+    , text >=1.2.4.0 && <1.3
+    , text-zipper >=0.10.1 && <0.11
     , thock
-    , time
-    , vector
-    , vty
-    , websockets
+    , time >=1.9.3 && <1.10
+    , vector >=0.12.1.2 && <0.13
+    , vty >=5.28.2 && <5.29
+    , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
 test-suite thock-test
@@ -127,20 +125,20 @@ test-suite thock-test
   default-extensions: OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-      aeson
+      aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
-    , brick
-    , containers
-    , file-embed
-    , lens
-    , mtl
-    , network
-    , random
-    , text
-    , text-zipper
+    , brick >=0.52.1 && <0.53
+    , containers >=0.6.2.1 && <0.7
+    , file-embed >=0.0.11.2 && <0.1
+    , lens >=4.18.1 && <4.19
+    , mtl >=2.2.2 && <2.3
+    , network >=3.1.1.1 && <3.2
+    , random ==1.1.*
+    , text >=1.2.4.0 && <1.3
+    , text-zipper >=0.10.1 && <0.11
     , thock
-    , time
-    , vector
-    , vty
-    , websockets
+    , time >=1.9.3 && <1.10
+    , vector >=0.12.1.2 && <0.13
+    , vty >=5.28.2 && <5.29
+    , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
