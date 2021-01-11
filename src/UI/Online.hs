@@ -141,9 +141,14 @@ handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
-    V.EvKey (V.KChar _) [] -> nextState (o & (localGame . strokes) +~ 1)
+    V.EvKey (V.KChar _) [] -> nextState $ numStrokes o
     _ -> nextState o
   where
+    numStrokes o' =
+      if isDone (o' ^. localGame)
+      then o'
+      else o' & (localGame . strokes) +~ 1
+
     nextState o' =
       if isDone (o' ^. localGame)
         then M.continue (OnlineGame o')

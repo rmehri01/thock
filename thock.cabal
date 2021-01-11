@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.3.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 81d1d1005d8eba4dd8ebed3ea7e1b1d47dcf5e6f7e900095e95e3dfe9d375547
+-- hash: 4cb56a8445ae87f75e52fc3e426e253f9f55059ea6901de28753a46d0defd449
 
 name:           thock
 version:        0.2.0.0
@@ -42,7 +42,7 @@ library
       Paths_thock
   hs-source-dirs:
       src
-  default-extensions: OverloadedStrings
+  default-extensions: FlexibleContexts OverloadedStrings
   build-depends:
       aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
@@ -67,7 +67,7 @@ executable server
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings
+  default-extensions: FlexibleContexts OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5
@@ -94,7 +94,7 @@ executable thock
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: OverloadedStrings
+  default-extensions: FlexibleContexts OverloadedStrings
   ghc-options: -O3 -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5
@@ -122,7 +122,7 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
-  default-extensions: OverloadedStrings
+  default-extensions: FlexibleContexts OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5

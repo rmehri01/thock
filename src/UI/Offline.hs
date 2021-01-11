@@ -212,11 +212,15 @@ handleKeyPractice g (VtyEvent ev) =
     V.EvKey V.KEsc [] -> M.continue initialGame
     V.EvKey (V.KChar 'r') [V.MCtrl] -> M.continue (startPracticeGame (g ^. quote))
     V.EvKey (V.KChar 'n') [V.MCtrl] -> liftIO generateQuote >>= M.continue . startPracticeGame
-    V.EvKey (V.KChar _) [] -> nextState (g & strokes +~ 1)
+    V.EvKey (V.KChar _) [] -> nextState $ numStrokes g
     _ -> nextState g
   where
     nextState g' =
       if isDone g'
         then M.continue (Practice g')
         else updateGameState g' ev >>= M.continue . Practice
+    numStrokes g' =
+      if isDone g'
+        then g'
+        else g' & strokes +~ 1
 handleKeyPractice g _ = M.continue (Practice g)
