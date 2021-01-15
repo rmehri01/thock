@@ -73,6 +73,7 @@ jobs:
           mv ~/.local/bin/thock .
 
       - name: Reduce size of executable
+        if: matrix.os_name == 'linux'
         uses: svenstaro/upx-action@v2
         with:
           file: thock

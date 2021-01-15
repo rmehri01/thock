@@ -16,7 +16,7 @@ import Brick
   )
 import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
-import Control.Lens ((%~), (&), (+~), (.~), (^.))
+import Control.Lens ((%~), (&), (.~), (^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Graphics.Vty as V
 import Online
@@ -141,24 +141,16 @@ handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
-    V.EvKey (V.KChar _) [] -> nextState $ numStrokes o
-    _ -> nextState o
-  where
-    numStrokes o' =
-      if isDone (o' ^. localGame)
-      then o'
-      else o' & (localGame . strokes) +~ 1
-
-    nextState o' =
-      if isDone (o' ^. localGame)
-        then M.continue (OnlineGame o')
+    _ ->
+      if isDone (o ^. localGame)
+        then M.continue (OnlineGame o)
         else do
-          updatedGame <- updateGameState (o' ^. localGame) ev
+          updatedGame <- updateGameState (o ^. localGame) ev
           let newClientState = GameClientState (o ^. username) (calculateProgress updatedGame) (calculateWpm updatedGame)
           _ <-
             liftIO $
               sendJsonData
                 (o ^. connection)
                 (GameClientUpdate newClientState)
-          M.continue (OnlineGame $ o' & localGame .~ updatedGame)
+          M.continue (OnlineGame $ o & localGame .~ updatedGame)
 handleKeyOnlineState o _ = M.continue (OnlineGame o)

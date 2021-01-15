@@ -31,7 +31,7 @@ import qualified Brick.Main as M
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import Client (runClient)
-import Control.Lens ((&), (+~), (^.))
+import Control.Lens ((^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.Text as T
 import qualified Graphics.Vty as V
@@ -212,15 +212,8 @@ handleKeyPractice g (VtyEvent ev) =
     V.EvKey V.KEsc [] -> M.continue initialGame
     V.EvKey (V.KChar 'r') [V.MCtrl] -> M.continue (startPracticeGame (g ^. quote))
     V.EvKey (V.KChar 'n') [V.MCtrl] -> liftIO generateQuote >>= M.continue . startPracticeGame
-    V.EvKey (V.KChar _) [] -> nextState $ numStrokes g
-    _ -> nextState g
-  where
-    nextState g' =
-      if isDone g'
-        then M.continue (Practice g')
-        else updateGameState g' ev >>= M.continue . Practice
-    numStrokes g' =
-      if isDone g'
-        then g'
-        else g' & strokes +~ 1
+    _ ->
+      if isDone g
+        then M.continue (Practice g)
+        else updateGameState g ev >>= M.continue . Practice
 handleKeyPractice g _ = M.continue (Practice g)

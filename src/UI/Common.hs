@@ -30,7 +30,7 @@ import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.ProgressBar as P
-import Control.Lens ((^.))
+import Control.Lens ((&), (+~), (^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.FileEmbed (embedFile)
 import qualified Data.Text as T
@@ -52,6 +52,7 @@ import Thock
     numIncorrectChars,
     quote,
     secondsElapsed,
+    strokes,
     updateTime,
   )
 import UI.Attributes
@@ -165,6 +166,7 @@ addBorder t = withBorderStyle BS.unicodeRounded . B.borderWithLabel (txt t)
 -- updating the 'GameState' accordingly
 updateGameState :: GameState -> Event -> EventM ResourceName GameState
 updateGameState g ev = do
-  gEdited <- handleEventLensed g input E.handleEditorEvent ev
+  let gWithStroke = g & strokes +~ 1
+  gEdited <- handleEventLensed gWithStroke input E.handleEditorEvent ev
   currentTime <- liftIO getCurrentTime
   return . updateTime currentTime $ movePromptCursor gEdited

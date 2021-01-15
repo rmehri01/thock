@@ -108,7 +108,7 @@ talk conn mState room = forever $ do
       if canStart (map (^. state) $ (ss ^. rooms) Map.! room)
         && isNothing (Map.lookup room (ss ^. activeGames))
         then do
-          newS <- modifyMVar mState $ \s -> do
+          newS <- modifyMVar mState $ \s ->
             let s' = makeActive room s in return (s', s')
           q <- generateQuote
           broadcastTo id room (StartGame q) (newS ^. activeGames)

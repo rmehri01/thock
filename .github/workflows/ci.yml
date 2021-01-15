@@ -1,0 +1,59 @@
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+name: Build
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+
+      - name: Check formatting
+        uses: mrkkrp/ormolu-action@v1
+
+      - name: Haskell Linter
+        uses: domdere/haskell-lint-action@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache ~/.stack folder
+        uses: actions/cache@v2
+        with:
+          path: ~/.stack
+          key: stack-global-linux-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-global-linux
+
+      - name: Cache ~/.local/bin folder
+        uses: actions/cache@v2
+        with:
+          path: ~/.local/bin
+          key: stack-local-bin-linux-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-local-bin-linux
+
+      - name: Cache .stack-work folder
+        uses: actions/cache@v2
+        with:
+          path: .stack-work
+          key: stack-work-linux-${{hashFiles('**.yaml')}}
+          restore-keys: |
+            stack-work-linux
+
+      - uses: haskell/actions/setup@v1
+        with:
+          ghc-version: '8.8.4' # Exact version of ghc to use
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Build project
+        run: |
+          stack build --test
+
