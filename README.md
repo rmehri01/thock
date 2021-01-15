@@ -1,6 +1,6 @@
 # thock
 
-[![Hackage](https://img.shields.io/hackage/v/thock.svg)](https://hackage.haskell.org/package/thock)
+![GitHub Actions Status](https://github.com/rmehri01/thock/workflows/Build/badge.svg) [![Hackage](https://img.shields.io/hackage/v/thock.svg)](https://hackage.haskell.org/package/thock)
 
 ![An example of an online game](resources/demo.gif)
 

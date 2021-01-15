@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 48a58cdf804138fde5b7d063a31655f7f633b17654cdaef9cde8cdbba34a76ff
+-- hash: d2863e78d924ba368809dd238a643f64c02632b46e3a567f2fa7f535fc58d164
 
 name:           thock
-version:        0.2.0.0
+version:        0.2.1.0
 synopsis:       A modern TUI typing game featuring online racing against friends.
 description:    Please see the README on GitHub at <https://github.com/rmehri01/thock#readme>
 category:       Game

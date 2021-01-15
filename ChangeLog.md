@@ -1,5 +1,12 @@
 # Changelog for thock
 
+## 0.2.1.0
+
+Bug fixes:
+
+- [#8](https://github.com/rmehri01/thock/pull/8) Fix replaced words in quotes thanks to [@dedifferentiator](https://github.com/dedifferentiator).
+- [#9](https://github.com/rmehri01/thock/pull/9) Stop strokes from increasing after finished thanks to [@dedifferentiator](https://github.com/dedifferentiator).
+
 ## 0.2.0.0
 
 Fixes:
