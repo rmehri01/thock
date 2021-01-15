@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.3.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4cb56a8445ae87f75e52fc3e426e253f9f55059ea6901de28753a46d0defd449
+-- hash: 48a58cdf804138fde5b7d063a31655f7f633b17654cdaef9cde8cdbba34a76ff
 
 name:           thock
 version:        0.2.0.0
@@ -53,7 +53,7 @@ library
     , mtl >=2.2.2 && <2.3
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
-    , text >=1.2.4.0 && <1.3
+    , text >=1.2.3.0 && <1.3
     , text-zipper >=0.10.1 && <0.11
     , time >=1.9.3 && <1.10
     , vector >=0.12.1.2 && <0.13
@@ -79,7 +79,7 @@ executable server
     , mtl >=2.2.2 && <2.3
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
-    , text >=1.2.4.0 && <1.3
+    , text >=1.2.3.0 && <1.3
     , text-zipper >=0.10.1 && <0.11
     , thock
     , time >=1.9.3 && <1.10
@@ -106,7 +106,7 @@ executable thock
     , mtl >=2.2.2 && <2.3
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
-    , text >=1.2.4.0 && <1.3
+    , text >=1.2.3.0 && <1.3
     , text-zipper >=0.10.1 && <0.11
     , thock
     , time >=1.9.3 && <1.10
@@ -134,7 +134,7 @@ test-suite thock-test
     , mtl >=2.2.2 && <2.3
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
-    , text >=1.2.4.0 && <1.3
+    , text >=1.2.3.0 && <1.3
     , text-zipper >=0.10.1 && <0.11
     , thock
     , time >=1.9.3 && <1.10
