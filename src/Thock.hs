@@ -6,6 +6,7 @@
 -- | This module provides the core data and functionality for handling the game.
 module Thock where
 
+import Brick (str)
 import Brick.Forms (Form)
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
@@ -35,7 +36,7 @@ import Data.Text.Zipper
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Data.Vector as Vec
 import GHC.Generics (Generic)
-import Quotes (Quote, numChars, text)
+import Quotes (Quote, QuotesSet (..), numChars, text)
 import System.Random (Random (randoms), getStdGen)
 
 -- | Unique identifiers to describe cursor locations
@@ -51,6 +52,8 @@ data GameState = GameState
     _prompt :: TextZipper T.Text,
     -- | Player input for the current word
     _input :: E.Editor T.Text ResourceName,
+    -- | The set of choosen quotes
+    _quotesSet :: QuotesSet,
     -- | The quote being typed
     _quote :: Quote,
     -- | The time the game started if it has started
@@ -90,12 +93,19 @@ instance FromJSON RoomFormData
 instance ToJSON RoomFormData
 
 type RoomForm a = Form a () ResourceName
+data RoomInitData = RoomInitData
+  { _uname :: Username,
+    _qset :: QuotesSet
+  }
+makeFieldsNoPrefix ''RoomInitData
 
 -- | The current status of the game
 data Game
   = MainMenu MenuList
+  | PracticeSelectLang MenuList
   | OnlineSelect MenuList
-  | CreateRoomMenu (RoomForm Username)
+  | OnlineSelectLang MenuList
+  | CreateRoomMenu (RoomForm RoomInitData)
   | JoinRoomMenu (RoomForm RoomFormData)
   | Practice GameState
   | ErrorOverlay Game T.Text
@@ -178,11 +188,12 @@ isDone :: GameState -> Bool
 isDone g = numCorrectChars g == g ^. (quote . numChars)
 
 -- | Creates an initial game with the given quote
-initializeGameState :: Quote -> GameState
-initializeGameState q =
+initializeGameState :: QuotesSet -> Quote -> GameState
+initializeGameState s q =
   GameState
     { _prompt = textZipper (T.words (q ^. text)) Nothing,
       _input = E.editor Ordinary (Just 1) "",
+      _quotesSet = s,
       _quote = q,
       _start = Nothing,
       _lastUpdated = Nothing,
@@ -193,13 +204,25 @@ initializeGameState q =
 initialGame :: Game
 initialGame = MainMenu (L.list Ordinary (Vec.fromList ["Practice", "Online"]) 2)
 
+-- | Creates a select `QuotesSet` menu after choosing practice
+pracSelectLang :: Game
+pracSelectLang = PracticeSelectLang langList
+
+-- | Initializes a 'Practice' game with the given quote
+startPracticeGame :: QuotesSet -> Quote -> Game
+startPracticeGame s q = Practice $ initializeGameState s q
+
 -- | Creates a 'Game' for the online select menu with options to create or join a room
 onlineSelectState :: Game
 onlineSelectState = OnlineSelect (L.list Ordinary (Vec.fromList ["Create room", "Join room"]) 2)
 
--- | Initializes a 'Practice' game with the given quote
-startPracticeGame :: Quote -> Game
-startPracticeGame q = Practice (initializeGameState q)
+-- | Creates a `QuotesSet` menu after choosing online game
+onlineSelectLang :: Game
+onlineSelectLang = OnlineSelectLang langList
+
+-- | Creates a `QuotesSet` menu
+langList :: L.GenericList ResourceName Vec.Vector T.Text
+langList = L.list Ordinary (Vec.fromList ["English", "Russian", "Haskell"]) 3
 
 -- | Randomly generates an alphanumeric 'RoomId'
 generateRoomId :: IO RoomId

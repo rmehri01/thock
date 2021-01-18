@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d2863e78d924ba368809dd238a643f64c02632b46e3a567f2fa7f535fc58d164
+-- hash: f2954fa4e7a7d7edc11c82b4c63c8b767e766162c222260faabaed8d8a8f5423
 
 name:           thock
 version:        0.2.1.0
@@ -42,7 +42,7 @@ library
       Paths_thock
   hs-source-dirs:
       src
-  default-extensions: FlexibleContexts OverloadedStrings
+  default-extensions: DuplicateRecordFields FlexibleContexts OverloadedStrings TypeApplications
   build-depends:
       aeson >=1.4.7.1 && <1.5
     , base >=4.7 && <5
@@ -67,7 +67,7 @@ executable server
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: FlexibleContexts OverloadedStrings
+  default-extensions: DuplicateRecordFields FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5
@@ -94,7 +94,7 @@ executable thock
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: FlexibleContexts OverloadedStrings
+  default-extensions: DuplicateRecordFields FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -O3 -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5
@@ -122,7 +122,7 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
-  default-extensions: FlexibleContexts OverloadedStrings
+  default-extensions: DuplicateRecordFields FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.4.7.1 && <1.5

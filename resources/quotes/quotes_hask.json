@@ -1,0 +1,17 @@
+[
+  {
+    "text": "type MenuList = L.List ResourceName T.Text",
+    "source": "Thock",
+    "numChars": 42
+  },
+  {
+    "text": "instance FromJSON Username",
+    "source": "Thock",
+    "numChars": 26
+  },
+  {
+    "text": "nnext = M.continue . startPracticeGame qs =<< liftIO (generateQuote qs)",
+    "source": "Thock",
+    "numChars": 71
+  }
+]

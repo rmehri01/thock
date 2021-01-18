@@ -35,7 +35,7 @@ import Control.Lens ((^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.Text as T
 import qualified Graphics.Vty as V
-import Quotes (generateQuote)
+import Quotes (generateQuote, QuotesSet (..))
 import Thock
   ( Game (..),
     GameState,
@@ -45,14 +45,19 @@ import Thock
     ResourceName (RoomIdField, UsernameField),
     RoomForm,
     RoomFormData (RoomFormData),
+    RoomInitData (..),
     Username (Username),
     generateRoomId,
     initialGame,
     isDone,
+    onlineSelectLang,
     onlineSelectState,
+    pracSelectLang,
+    quotesSet,
     quote,
     startPracticeGame,
     strokes,
+    uname,
     value,
   )
 import UI.Attributes (attributeMap, redAttr, secondaryAttr)
@@ -82,7 +87,9 @@ localApp =
 drawGame :: Game -> [Widget ResourceName]
 drawGame g = case g of
   MainMenu l -> drawList l
+  PracticeSelectLang l -> drawList l
   OnlineSelect l -> drawList l
+  OnlineSelectLang l -> drawList l
   CreateRoomMenu form -> drawForm form
   JoinRoomMenu form -> drawForm form
   Practice gs -> drawPractice gs
@@ -121,39 +128,66 @@ drawError g t = errorPopup : drawGame g
 handleKeyGame :: Game -> BrickEvent ResourceName () -> EventM ResourceName (Next Game)
 handleKeyGame gs ev = case gs of
   MainMenu l -> handleKeyMainMenu l ev
+  PracticeSelectLang l -> handleKeyPracLang l ev
   OnlineSelect l -> handleKeyOnlineSelect l ev
-  CreateRoomMenu form -> handleKeyForm CreateRoomMenu (\u -> generateRoomId >>= runClient True . RoomFormData u) (^. value) form ev
-  JoinRoomMenu form -> handleKeyForm JoinRoomMenu (runClient False) (^. (username . value)) form ev
+  OnlineSelectLang l -> handleKeyOnlineLang l ev
+  CreateRoomMenu form -> handleKeyForm CreateRoomMenu cr cl form ev
+  JoinRoomMenu form -> handleKeyForm JoinRoomMenu jr jl form ev
   Practice g -> handleKeyPractice g ev
   ErrorOverlay prev _ -> M.continue prev -- after receiving any event, remove the error overlay
+  where cr (RoomInitData u qs) = runClient True (Just qs) . RoomFormData u =<< generateRoomId
+        jr   = runClient False Nothing
+        cl   = (^. (uname . value))
+        jl   = (^. (username . value))
 
 -- | Handles key events for navigating the 'MainMenu'
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
 handleKeyMainMenu l (VtyEvent e) = case e of
-  V.EvKey V.KEsc [] -> M.halt (MainMenu l)
+  V.EvKey V.KEsc [] -> M.halt $ MainMenu l
   V.EvKey V.KEnter []
-    | Just i <- L.listSelected l ->
-      if i == 0
-        then liftIO generateQuote >>= M.continue . startPracticeGame
-        else M.continue onlineSelectState
-  ev -> L.handleListEvent ev l >>= M.continue . MainMenu
-handleKeyMainMenu l _ = M.continue (MainMenu l)
+    | Just i <- L.listSelected l -> case i of
+        0 -> M.continue pracSelectLang
+        _ -> M.continue onlineSelectState
+  ev -> M.continue . MainMenu =<< L.handleListEvent ev l
+handleKeyMainMenu l _ = M.continue $ MainMenu l
+
+-- | Handles key events for navigating the 'LangMenu' after choosing practice
+handleKeyPracLang :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
+handleKeyPracLang l (VtyEvent e) = case e of
+  V.EvKey V.KEsc [] -> M.continue initialGame
+  V.EvKey V.KEnter []
+    | Just i <- L.listSelected l -> ng $ case i of
+        0 -> English
+        1 -> Russian
+        _ -> Haskell
+  ev -> M.continue . PracticeSelectLang =<< L.handleListEvent ev l
+  where ng qs = M.continue . startPracticeGame qs =<< liftIO (generateQuote qs)
+
+-- | Handles key events for navigating the 'LangMenu' after choosing online
+handleKeyOnlineLang :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
+handleKeyOnlineLang l (VtyEvent e) = case e of
+  V.EvKey V.KEsc [] -> M.continue onlineSelectState
+  V.EvKey V.KEnter []
+    | Just i <- L.listSelected l -> ng $ case i of
+        0 -> English
+        1 -> Russian
+        _ -> Haskell
+  ev -> M.continue . OnlineSelectLang =<< L.handleListEvent ev l
+  where ng qs = M.continue $ CreateRoomMenu $ makeCreateRoomForm
+                $ RoomInitData (Username "") qs
 
 -- | Handles key events for creating or joining an online room
 handleKeyOnlineSelect :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
 handleKeyOnlineSelect l (VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.continue initialGame
   V.EvKey V.KEnter []
-    | Just i <- L.listSelected l ->
-      M.continue
-        ( if i == 0
-            then CreateRoomMenu (makeCreateRoomForm emptyUsername)
-            else JoinRoomMenu (makeJoinRoomForm emptyRoomFormData)
-        )
+    | Just i <- L.listSelected l -> M.continue $ case i of
+        0 -> onlineSelectLang
+        _ -> JoinRoomMenu $ makeJoinRoomForm emptyRoomFormData
     where
       emptyUsername = Username ""
       emptyRoomFormData = RoomFormData emptyUsername ""
-  ev -> L.handleListEvent ev l >>= M.continue . OnlineSelect
+  ev -> M.continue . OnlineSelect =<< L.handleListEvent ev l
 handleKeyOnlineSelect l _ = M.continue (OnlineSelect l)
 
 -- | Handles a key event for a form and its validation
@@ -179,12 +213,12 @@ handleKeyForm ctr onEnter getUser form ev@(VtyEvent e) = case e of
 handleKeyForm ctr _ _ form _ = M.continue (ctr form)
 
 -- | Construct a 'RoomForm' with the given 'Username' as the initial state
-makeCreateRoomForm :: Username -> RoomForm Username
+makeCreateRoomForm :: RoomInitData -> RoomForm RoomInitData
 makeCreateRoomForm =
   newForm
     [ formLabel "Username"
         @@= addBorder ""
-        @@= editTextField value UsernameField (Just 1)
+        @@= editTextField (uname . value) UsernameField (Just 1)
     ]
 
 -- | Construct a 'RoomForm' with the given 'RoomFormData' as the initial state
@@ -210,10 +244,15 @@ handleKeyPractice :: GameState -> BrickEvent ResourceName e -> EventM ResourceNa
 handleKeyPractice g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.continue initialGame
-    V.EvKey (V.KChar 'r') [V.MCtrl] -> M.continue (startPracticeGame (g ^. quote))
-    V.EvKey (V.KChar 'n') [V.MCtrl] -> liftIO generateQuote >>= M.continue . startPracticeGame
+    V.EvKey (V.KChar 'r') [V.MCtrl] -> rnext
+    V.EvKey (V.KChar 'n') [V.MCtrl] -> nnext
     _ ->
       if isDone g
-        then M.continue (Practice g)
-        else updateGameState g ev >>= M.continue . Practice
-handleKeyPractice g _ = M.continue (Practice g)
+        then M.continue . Practice $ g
+        else M.continue . Practice =<< updateGameState g ev
+  where
+    q  = g ^. quote
+    qs = g ^. quotesSet
+    rnext = M.continue . startPracticeGame qs $ q
+    nnext = M.continue . startPracticeGame qs =<< liftIO (generateQuote qs)
+handleKeyPractice g _ = M.continue $ Practice g
