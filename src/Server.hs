@@ -40,7 +40,7 @@ import Online
     receiveJsonData,
     sendJsonData,
   )
-import Quotes (QuotesSet (..), generateQuote)
+import Quotes (generateQuote, QuotesSet (..))
 import Thock
   ( HasUsername (..),
     RoomFormData (RoomFormData),
@@ -76,12 +76,13 @@ serverApp mState pending = do
         qs = fromMaybe English mqs
 
     if isCreating
-      then createR conn onClose rId qs client
+      then mkRoom conn onClose rId qs client
       else do
         ss <- readMVar mState
         let response
               | hasRoom rId ss = sendData conn $ Left "room does not exist"
-              | clientExists rId user ss = sendData conn $ Left "username already exists in that room"
+              | clientExists rId user ss =
+                  sendData conn $ Left "username already exists in that room"
               | otherwise = joinClient conn onClose rId client user
         response
   where
@@ -89,7 +90,7 @@ serverApp mState pending = do
     getData  c   = receiveJsonData c :: IO (RoomFormData, Bool, Maybe QuotesSet)
     sendData c d = sendJsonData c (d :: Either T.Text [RoomClientState])
     hasRoom  r s = not $ Map.member r (s ^. rooms)
-    createR c oc r qs cl = flip finally oc $ do
+    mkRoom c oc r qs cl = flip finally oc $ do
         modifyMVar_ mState $ \s -> return $ createRoom r qs cl s
         talk c mState r
     joinClient c oc r cl u = flip finally oc $ do
@@ -107,6 +108,7 @@ serverApp mState pending = do
 talk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
 talk conn mState room = forever $ do
   cMessage <- receiveJsonData conn
+
   case cMessage of
     RoomClientUpdate r -> do
       ss <- modifyMVar mState $ \s ->
@@ -168,7 +170,7 @@ removeGameClient room user ss = ss & activeGames %~ removeClient room user
 removeClient :: (Ord k, HasState s a2, HasUsername a2 a1, Eq a1)
   => k -> a1 -> Map k (q, [s]) -> Map k (q, [s])
 removeClient room user m =
-  if null $ withoutUser Map.! room
+  if null $ snd $ withoutUser Map.! room
     then Map.delete room withoutUser
     else withoutUser
   where

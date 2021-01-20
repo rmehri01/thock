@@ -136,9 +136,9 @@ handleKeyGame gs ev = case gs of
   Practice g -> handleKeyPractice g ev
   ErrorOverlay prev _ -> M.continue prev -- after receiving any event, remove the error overlay
   where cr (RoomInitData u qs) = runClient True (Just qs) . RoomFormData u =<< generateRoomId
-        jr   = runClient False Nothing
-        cl   = (^. (uname . value))
-        jl   = (^. (username . value))
+        jr = runClient False Nothing
+        cl = (^. (uname . value))
+        jl = (^. (username . value))
 
 -- | Handles key events for navigating the 'MainMenu'
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)

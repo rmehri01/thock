@@ -36,7 +36,7 @@ import Data.Text.Zipper
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Data.Vector as Vec
 import GHC.Generics (Generic)
-import Quotes (Quote, QuotesSet (..), numChars, text)
+import Quotes (numChars, Quote, QuotesSet (..), text)
 import System.Random (Random (randoms), getStdGen)
 
 -- | Unique identifiers to describe cursor locations

@@ -27,6 +27,7 @@ import Online
     HasConnection (connection),
     HasIsReady (isReady),
     HasLocalGame (localGame),
+    HasLocalState (localState),
     HasOtherPlayers (otherPlayers),
     HasProgress (progress),
     HasQuotesSet (quotesSet),
@@ -123,26 +124,32 @@ handleKeyWaitingRoom (WaitingRoomState room qs localSt conn _) (AppEvent (Connec
   case csReceived of
     RoomUpdate rs -> M.continue . WaitingRoom $ WaitingRoomState room qs localSt conn rs
     StartGame q gs -> M.continue . OnlineGame $ OnlineGameState (initializeGameState qs q) room qs (localSt ^. username) conn gs
-    -- TODO: fix this :)
+    -- FIXME :)
     _ -> undefined
-handleKeyWaitingRoom (WaitingRoomState room qs localSt conn ps) (VtyEvent ev) =
+handleKeyWaitingRoom ws@(WaitingRoomState room qs localSt conn ps) (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> M.halt . WaitingRoom $ WaitingRoomState room qs localSt conn ps
+    V.EvKey V.KEsc [] -> M.halt $ WaitingRoom ws
     V.EvKey (V.KChar 'r') [] -> do
       let newSt = localSt & isReady %~ not
       liftIO $ sendJsonData conn $ RoomClientUpdate newSt
-      M.continue . WaitingRoom $ WaitingRoomState room qs newSt conn ps
-    _ -> M.continue . WaitingRoom $ WaitingRoomState room qs localSt conn ps
-handleKeyWaitingRoom (WaitingRoomState room qs localSt conn ps) _ =
-  M.continue . WaitingRoom $ WaitingRoomState room qs localSt conn ps
+      M.continue . WaitingRoom $ ws & localState .~ newSt
+    _ -> M.continue $ WaitingRoom ws
+handleKeyWaitingRoom ws _ = M.continue $ WaitingRoom ws
 
 -- | Handles both local and 'ConnectionTick' events when the player is in an 'OnlineGame'
 handleKeyOnlineState :: OnlineGameState -> BrickEvent ResourceName ConnectionTick -> EventM ResourceName (Next Online)
 handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
   case csReceived of
-    RoomUpdate rs -> M.continue . WaitingRoom $ WaitingRoomState (o ^. roomId) (o ^. quotesSet) (RoomClientState (o ^. username) False) (o ^. connection) rs
+    RoomUpdate rs -> M.continue . WaitingRoom $ wrs rs
     GameUpdate gs -> M.continue . OnlineGame $ o & otherPlayers .~ gs
+    -- FIXME
     _ -> undefined
+  where
+    wrs = WaitingRoomState
+            (o ^. roomId)
+            (o ^. quotesSet)
+            (RoomClientState (o ^. username) False)
+            (o ^. connection)
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)

@@ -37,7 +37,6 @@ dependencies:
 - websockets  >= 0.12.7.1 && < 0.13
 
 default-extensions:
-  DuplicateRecordFields
   FlexibleContexts
   OverloadedStrings
   TypeApplications
