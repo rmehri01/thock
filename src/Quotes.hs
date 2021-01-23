@@ -29,7 +29,9 @@ data QuotesSet
   deriving (Eq, Generic)
 
 instance FromJSON QuotesSet
+
 instance ToJSON QuotesSet
+
 instance Show QuotesSet where
   show English = "English"
   show Russian = "Russian"
@@ -42,12 +44,14 @@ data Quote = Quote
     _source :: T.Text,
     -- | The number of characters in the quote
     _numChars :: Int
-  } deriving (Generic)
+  }
+  deriving (Generic)
 
 makeLenses ''Quote
 
 instance FromJSON Quote where
   parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+
 instance ToJSON Quote where
   toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}
 
@@ -62,15 +66,15 @@ generateQuote set = randomElem qs
 -- | Returns the first element that matches the path
 -- for the given `QuotesSet`
 getFirstMatch :: QuotesSet -> [(FilePath, Maybe [a])] -> Maybe [a]
-getFirstMatch qs (x:xs) =
+getFirstMatch qs (x : xs) =
   if fst x == getPath qs
-  then snd x
-  else getFirstMatch qs xs
-
-  where getPath set = case set of
-          English -> "quotes_en.json"
-          Russian -> "quotes_ru.json"
-          Haskell -> "quotes_hask.json"
+    then snd x
+    else getFirstMatch qs xs
+  where
+    getPath set = case set of
+      English -> "quotes_en.json"
+      Russian -> "quotes_ru.json"
+      Haskell -> "quotes_hask.json"
 getFirstMatch _ [] = Nothing
 
 -- | Produces a random element in the given list

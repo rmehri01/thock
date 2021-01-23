@@ -145,11 +145,12 @@ handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
     -- FIXME
     _ -> undefined
   where
-    wrs = WaitingRoomState
-            (o ^. roomId)
-            (o ^. quotesSet)
-            (RoomClientState (o ^. username) False)
-            (o ^. connection)
+    wrs =
+      WaitingRoomState
+        (o ^. roomId)
+        (o ^. quotesSet)
+        (RoomClientState (o ^. username) False)
+        (o ^. connection)
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)

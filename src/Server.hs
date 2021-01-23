@@ -40,7 +40,7 @@ import Online
     receiveJsonData,
     sendJsonData,
   )
-import Quotes (generateQuote, QuotesSet (..))
+import Quotes (QuotesSet (..), generateQuote)
 import Thock
   ( HasUsername (..),
     RoomFormData (RoomFormData),
@@ -51,7 +51,8 @@ import Thock
 data ServerState = ServerState
   { _rooms :: Map RoomId (QuotesSet, [RoomClient]),
     _activeGames :: Map RoomId (QuotesSet, [GameClient])
-  } deriving (Generic)
+  }
+  deriving (Generic)
 
 makeLenses ''ServerState
 
@@ -71,8 +72,9 @@ serverApp mState pending = do
 
     let client = mkClient user conn
         onClose = roomBroadcastExceptSending rId user =<< modifyMVar mState rmAll
-          where rm st = removeRoomClient rId user st
-                rmAll st = return (rm st, rm st)
+          where
+            rm st = removeRoomClient rId user st
+            rmAll st = return (rm st, rm st)
         qs = fromMaybe English mqs
 
     if isCreating
@@ -82,27 +84,26 @@ serverApp mState pending = do
         let response
               | hasRoom rId ss = sendData conn $ Left "room does not exist"
               | clientExists rId user ss =
-                  sendData conn $ Left "username already exists in that room"
+                sendData conn $ Left "username already exists in that room"
               | otherwise = joinClient conn onClose rId client user
         response
   where
     mkClient u c = RoomClient (RoomClientState u False) c
-    getData  c   = receiveJsonData c :: IO (RoomFormData, Bool, Maybe QuotesSet)
+    getData c = receiveJsonData c :: IO (RoomFormData, Bool, Maybe QuotesSet)
     sendData c d = sendJsonData c (d :: Either T.Text [RoomClientState])
-    hasRoom  r s = not $ Map.member r (s ^. rooms)
+    hasRoom r s = not $ Map.member r (s ^. rooms)
     mkRoom c oc r qs cl = flip finally oc $ do
-        modifyMVar_ mState $ \s -> return $ createRoom r qs cl s
-        talk c mState r
+      modifyMVar_ mState $ \s -> return $ createRoom r qs cl s
+      talk c mState r
     joinClient c oc r cl u = flip finally oc $ do
-                modifyMVar_ mState $ \s -> do
-                  let s' = addRoomClient r cl s
-                  let m = (s' ^. rooms) Map.! r
-                  let rsExceptUser = deleteFirstEqualUsername u $ snd m
-                  sendData c $ Right $ map (^. state) rsExceptUser
-                  roomBroadcastExceptSending r u s'
-                  return s'
-                talk c mState r
-
+      modifyMVar_ mState $ \s -> do
+        let s' = addRoomClient r cl s
+        let m = (s' ^. rooms) Map.! r
+        let rsExceptUser = deleteFirstEqualUsername u $ snd m
+        sendData c $ Right $ map (^. state) rsExceptUser
+        roomBroadcastExceptSending r u s'
+        return s'
+      talk c mState r
 
 -- | Communicates with a single client by receiving and sending updates through conn
 talk :: WS.Connection -> MVar ServerState -> RoomId -> IO ()
@@ -167,8 +168,12 @@ removeGameClient :: RoomId -> T.Text -> ServerState -> ServerState
 removeGameClient room user ss = ss & activeGames %~ removeClient room user
 
 -- | Remove a user from the room in m and delete the room if it is empty
-removeClient :: (Ord k, HasState s a2, HasUsername a2 a1, Eq a1)
-  => k -> a1 -> Map k (q, [s]) -> Map k (q, [s])
+removeClient ::
+  (Ord k, HasState s a2, HasUsername a2 a1, Eq a1) =>
+  k ->
+  a1 ->
+  Map k (q, [s]) ->
+  Map k (q, [s])
 removeClient room user m =
   if null $ snd $ withoutUser Map.! room
     then Map.delete room withoutUser
@@ -185,8 +190,12 @@ updateGameClient :: RoomId -> GameClientState -> ServerState -> ServerState
 updateGameClient room client ss = ss & activeGames %~ updateClient room client
 
 -- | Updates the state of a client based on username in the given room in a Map
-updateClient :: (Ord k, HasState b a1, HasUsername a1 a2, Eq a2)
-  => k -> a1 -> Map k (q, [b]) -> Map k (q, [b])
+updateClient ::
+  (Ord k, HasState b a1, HasUsername a1 a2, Eq a2) =>
+  k ->
+  a1 ->
+  Map k (q, [b]) ->
+  Map k (q, [b])
 updateClient room client = Map.adjust (second (map updateIfClient)) room
   where
     updateIfClient other =
@@ -203,24 +212,25 @@ makeActive :: RoomId -> ServerState -> ServerState
 makeActive room ss =
   ss & rooms %~ Map.insert room (fst states, []) & activeGames %~ Map.insert room clients
   where
-    clients = flip second states $ map
-      $ \(RoomClient (RoomClientState user _) conn)
-       -> GameClient (GameClientState user 0 0) conn
+    clients = flip second states $
+      map $
+        \(RoomClient (RoomClientState user _) conn) ->
+          GameClient (GameClientState user 0 0) conn
     states = (ss ^. rooms) Map.! room
 
 -- | Sends an update of the 'ServerState' to everyone in a waiting room
 -- except the one who triggered the update
 roomBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
 roomBroadcastExceptSending room sending ss =
-  broadcastTo (deleteFirstEqualUsername sending) room RoomUpdate
-  $ snd <$> (ss ^. rooms)
+  broadcastTo (deleteFirstEqualUsername sending) room RoomUpdate $
+    snd <$> (ss ^. rooms)
 
 -- | Sends an update of the 'ServerState' to everyone in an active game
 -- except the `sending` one who triggered the update
 gameBroadcastExceptSending :: RoomId -> T.Text -> ServerState -> IO ()
 gameBroadcastExceptSending room sending ss =
-  broadcastTo (deleteFirstEqualUsername sending) room GameUpdate
-  $ snd <$> (ss ^. activeGames)
+  broadcastTo (deleteFirstEqualUsername sending) room GameUpdate $
+    snd <$> (ss ^. activeGames)
 
 -- | Sends an update of the 'ServerState' to everyone in a room
 broadcastTo ::

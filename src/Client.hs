@@ -8,8 +8,8 @@ import Brick (customMain)
 import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkFinally)
 import Control.Monad (forever)
-import qualified Data.Text as T
 import Data.Maybe (fromMaybe)
+import qualified Data.Text as T
 import qualified Graphics.Vty as V
 import Network.Socket (withSocketsDo)
 import qualified Network.WebSockets as WS
@@ -21,8 +21,8 @@ import Online
     receiveJsonData,
     sendJsonData,
   )
-import Thock (RoomFormData (RoomFormData), Username (Username))
 import Quotes (QuotesSet (..))
+import Thock (RoomFormData (RoomFormData), Username (Username))
 import UI.Online (onlineApp)
 
 -- | Sets up the initial state of the 'Online' state using the formData
@@ -37,7 +37,7 @@ createClientApp isCreating mqs formData@(RoomFormData (Username user) room) conn
       res <- receiveJsonData conn
       case res of
         Right others -> startRoom others
-        Left msg     -> return $ Just msg -- Stop connection due to error message received from server
+        Left msg -> return $ Just msg -- Stop connection due to error message received from server
   where
     qs = fromMaybe English mqs
     localSt = RoomClientState user False
