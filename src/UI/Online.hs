@@ -124,6 +124,7 @@ handleKeyWaitingRoom (WaitingRoomState room localSt conn _) (AppEvent (Connectio
 handleKeyWaitingRoom (WaitingRoomState room localSt conn ps) (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt (WaitingRoom $ WaitingRoomState room localSt conn ps)
+    V.EvKey (V.KChar 'q') [] -> M.halt $ WaitingRoom $ WaitingRoomState room localSt conn ps
     V.EvKey (V.KChar 'r') [] -> do
       let newSt = localSt & isReady %~ not
       liftIO (sendJsonData conn (RoomClientUpdate newSt))
@@ -140,10 +141,12 @@ handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
     _ -> undefined
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
-    V.EvKey V.KEsc [] -> liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
+    V.EvKey V.KEsc [] -> exit
+    V.EvKey (V.KChar 'q') [V.MCtrl] -> exit
     V.EvKey (V.KChar _) [] -> nextState $ numStrokes o
     _ -> nextState o
   where
+    exit = liftIO (sendJsonData (o ^. connection) (BackToLobby $ o ^. username)) >> M.continue (OnlineGame o)
     numStrokes o' =
       if isDone (o' ^. localGame)
       then o'
