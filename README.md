@@ -20,6 +20,13 @@ cd thock
 stack install thock
 ```
 
+## Usage
+ | Key | Description
+ | - | -
+ | `Esc / q` | go back <br> `Note: q doesn't work during typing, use ^q instead`
+ | `^r` | retry (during practice)
+ | `^n / Enter` | next quote (during practice)
+
 ## Credit
 
 The terminal UI is made using the amazing [brick](https://github.com/jtdaugherty/brick/) library and the online functionality was done using [websockets](https://github.com/jaspervdj/websockets). I also took a great amount of inspiration from other great projects such as [hascard](https://github.com/Yvee1/hascard), [monkeytype](https://github.com/Miodec/monkeytype), and [gotta-go-fast](https://github.com/callum-oakley/gotta-go-fast).
