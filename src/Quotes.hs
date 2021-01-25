@@ -16,6 +16,7 @@ import Data.Aeson
   )
 import Data.Bifunctor (second)
 import Data.FileEmbed (embedDir, embedFile)
+import Data.List (find)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -26,16 +27,11 @@ data QuotesSet
   = English
   | Russian
   | Haskell
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, Show)
 
 instance FromJSON QuotesSet
 
 instance ToJSON QuotesSet
-
-instance Show QuotesSet where
-  show English = "English"
-  show Russian = "Russian"
-  show Haskell = "Haskell"
 
 data Quote = Quote
   { -- | The quote text itself
@@ -60,22 +56,18 @@ generateQuote :: QuotesSet -> IO Quote
 generateQuote set = randomElem qs
   where
     qs = flip fromMaybe fqs $ error "could not decode JSON into quote"
-    fqs = getFirstMatch set mqs
+    fqs = findSet set mqs
     mqs = map (second decodeStrict) $(embedDir "resources/quotes")
 
 -- | Returns the first element that matches the path
 -- for the given `QuotesSet`
-getFirstMatch :: QuotesSet -> [(FilePath, Maybe [a])] -> Maybe [a]
-getFirstMatch qs (x : xs) =
-  if fst x == getPath qs
-    then snd x
-    else getFirstMatch qs xs
+findSet :: QuotesSet -> [(FilePath, Maybe [a])] -> Maybe [a]
+findSet qs xs = find ((== getPath qs) . fst) xs >>= snd
   where
     getPath set = case set of
       English -> "quotes_en.json"
       Russian -> "quotes_ru.json"
       Haskell -> "quotes_hask.json"
-getFirstMatch _ [] = Nothing
 
 -- | Produces a random element in the given list
 randomElem :: [a] -> IO a

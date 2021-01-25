@@ -129,12 +129,14 @@ handleKeyWaitingRoom (WaitingRoomState room qs localSt conn _) (AppEvent (Connec
 handleKeyWaitingRoom ws@(WaitingRoomState room qs localSt conn ps) (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.halt $ WaitingRoom ws
-    V.EvKey (V.KChar 'q') [] -> M.halt $ WaitingRoom ws
-    V.EvKey (V.KChar 'r') [] -> do
+    V.EvKey (V.KChar 'r') [] -> sendReady
+    V.EvKey (V.KChar 'к') [] -> sendReady
+    _ -> M.continue $ WaitingRoom ws
+  where
+    sendReady = do
       let newSt = localSt & isReady %~ not
       liftIO $ sendJsonData conn $ RoomClientUpdate newSt
       M.continue . WaitingRoom $ ws & localState .~ newSt
-    _ -> M.continue $ WaitingRoom ws
 handleKeyWaitingRoom ws _ = M.continue $ WaitingRoom ws
 
 -- | Handles both local and 'ConnectionTick' events when the player is in an 'OnlineGame'
@@ -155,7 +157,6 @@ handleKeyOnlineState o (AppEvent (ConnectionTick csReceived)) =
 handleKeyOnlineState o (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> exit
-    V.EvKey (V.KChar 'q') [V.MCtrl] -> exit
     _ ->
       if isDone (o ^. localGame)
         then M.continue (OnlineGame o)

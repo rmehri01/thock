@@ -21,11 +21,12 @@ stack install thock
 ```
 
 ## Usage
- | Key | Description
- | - | -
- | `Esc / q` | go back <br> `Note: q doesn't work during typing, use ^q instead`
- | `^r` | retry (during practice)
- | `^n / Enter` | next quote (during practice)
+ | English/Haskell | Russian | Description | Game State
+ | - | - | -
+ | `Esc`        | `Esc`        | go back | Any
+ | `^r`         | `^к`         | retry | Practice
+ | `^n / Enter` | `^т / Enter` | next quote | Practice
+ | `r`          | `к`          | signal your readiness | Online game waiting room
 
 ## Credit
 

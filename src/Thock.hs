@@ -212,7 +212,7 @@ pracSelectLang = PracticeSelectLang langList
 
 -- | Initializes a 'Practice' game with the given quote
 startPracticeGame :: QuotesSet -> Quote -> Game
-startPracticeGame s q = Practice $ initializeGameState s q
+startPracticeGame qs q = Practice $ initializeGameState qs q
 
 -- | Creates a 'Game' for the online select menu with options to create or join a room
 onlineSelectState :: Game

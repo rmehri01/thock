@@ -114,7 +114,7 @@ drawMenu w = addBorder "" (C.center titleWidget <=> padBottom Max (C.hCenter w))
 -- | Draw a practice game based on its 'GameState'
 drawPractice :: GameState -> [Widget ResourceName]
 drawPractice g =
-  [ drawFinished g "Back: Esc / ^q | Retry: ^r | Next: ^n",
+  [ drawFinished g "Back: Esc | Retry: ^r | Next: Enter / ^n",
     drawProgressBarGameState g <=> drawPrompt g <=> drawInput g
   ]
 
@@ -145,7 +145,6 @@ handleKeyGame gs ev = case gs of
 handleKeyMainMenu :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
 handleKeyMainMenu l (VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> exit
-  V.EvKey (V.KChar 'q') [] -> exit
   V.EvKey V.KEnter []
     | Just i <- L.listSelected l -> case i of
       0 -> M.continue pracSelectLang
@@ -189,7 +188,6 @@ handleKeyOnlineLang l (VtyEvent e) = case e of
 handleKeyOnlineSelect :: MenuList -> BrickEvent ResourceName e -> EventM ResourceName (Next Game)
 handleKeyOnlineSelect l (VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.continue initialGame
-  V.EvKey (V.KChar 'q') [] -> M.continue initialGame
   V.EvKey V.KEnter []
     | Just i <- L.listSelected l -> M.continue $ case i of
       0 -> onlineSelectLang
@@ -213,7 +211,6 @@ handleKeyForm ::
   EventM ResourceName (Next Game)
 handleKeyForm ctr onEnter getUser form ev@(VtyEvent e) = case e of
   V.EvKey V.KEsc [] -> M.continue initialGame
-  V.EvKey (V.KChar 'q') [] -> M.continue initialGame
   V.EvKey V.KEnter [] ->
     if not . T.null $ getUser (formState form)
       then
@@ -255,9 +252,10 @@ handleKeyPractice :: GameState -> BrickEvent ResourceName e -> EventM ResourceNa
 handleKeyPractice g (VtyEvent ev) =
   case ev of
     V.EvKey V.KEsc [] -> M.continue initialGame
-    V.EvKey (V.KChar 'q') [V.MCtrl] -> M.continue initialGame
     V.EvKey (V.KChar 'r') [V.MCtrl] -> rnext
+    V.EvKey (V.KChar 'к') [V.MCtrl] -> rnext
     V.EvKey (V.KChar 'n') [V.MCtrl] -> nnext
+    V.EvKey (V.KChar 'т') [V.MCtrl] -> nnext
     V.EvKey V.KEnter [] -> nnext
     _ ->
       if isDone g
