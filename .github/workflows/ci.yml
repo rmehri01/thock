@@ -1,4 +1,4 @@
-on: 
+on:
   push:
     branches:
       - main
@@ -18,10 +18,16 @@ jobs:
       - name: Check formatting
         uses: mrkkrp/ormolu-action@v1
 
-      - name: Haskell Linter
-        uses: domdere/haskell-lint-action@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up hlint
+        uses: rwe/actions-hlint-setup@v1
+        with:
+          version: "3.1.6"
+
+      - name: Run hlint
+        uses: rwe/actions-hlint-run@v2
+        with:
+          path: src/
+          fail-on: warning
 
       - name: Cache ~/.stack folder
         uses: actions/cache@v2
@@ -49,11 +55,10 @@ jobs:
 
       - uses: haskell/actions/setup@v1
         with:
-          ghc-version: '8.8.4' # Exact version of ghc to use
+          ghc-version: "8.8.4" # Exact version of ghc to use
           enable-stack: true
-          stack-version: 'latest'
+          stack-version: "latest"
 
       - name: Build project
         run: |
           stack build --test
-
