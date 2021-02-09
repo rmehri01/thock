@@ -63,7 +63,7 @@ jobs:
 
       - uses: haskell/actions/setup@v1
         with:
-          ghc-version: '8.8.4' # Exact version of ghc to use
+          ghc-version: '8.10.3' # Exact version of ghc to use
           enable-stack: true
           stack-version: 'latest'
 
