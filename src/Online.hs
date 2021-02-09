@@ -13,7 +13,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Network.WebSockets as WS
-import Quotes (Quote)
+import Quotes (Quote, QuotesSet)
 import Thock (GameState, HasRoomId (..), HasUsername (..), RoomId)
 
 -- | The state of a client in a waiting room
@@ -88,6 +88,8 @@ newtype ConnectionTick = ConnectionTick ServerMessage
 data WaitingRoomState = WaitingRoomState
   { -- | Which room the player is in
     _roomId :: RoomId,
+    -- | Chosen set of quotes
+    _quotesSet :: QuotesSet,
     -- | Information about the player
     _localState :: RoomClientState,
     -- | The player's connection to the server
@@ -104,6 +106,8 @@ data OnlineGameState = OnlineGameState
     _localGame :: GameState,
     -- | Room to return to after the game is done
     _roomId :: RoomId,
+    -- | Chosen set of quotes
+    _quotesSet :: QuotesSet,
     -- | The player's username
     _username :: T.Text,
     -- | The player's connection to the server

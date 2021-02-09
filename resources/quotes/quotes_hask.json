@@ -1,0 +1,247 @@
+[
+  {
+    "text": "type MenuList = L.List ResourceName T.Text",
+    "source": "github.com/rmehri01/thock",
+    "numChars": 42
+  },
+  {
+    "text": "instance FromJSON Username",
+    "source": "github.com/rmehri01/thock",
+    "numChars": 26
+  },
+  {
+    "text": "nnext = M.continue . startPracticeGame qs =<< liftIO (generateQuote qs)",
+    "source": "github.com/rmehri01/thock",
+    "numChars": 71
+  },
+  {
+    "text": "type family Smuggler (x :: k) :: k where",
+    "source": "github.com/i-am-tom/haskell-exercises",
+    "numChars": 40
+  },
+  {
+    "text": "partitionPkgs :: NonEmpty (NonEmpty Package) -> ([Prebuilt], [NonEmpty Buildable])",
+    "source": "github.com/fosskers/aura",
+    "numChars": 82
+  },
+  {
+    "text": "sudo act = asks (hasRootPriv . envOf . settings) >>= bool (throwM . Failure $ FailMsg mustBeRoot_1) act",
+    "source": "github.com/fosskers/aura",
+    "numChars": 103
+  },
+  {
+    "text": "updateResults s $ parallely $ S.mapMaybeM (runPlugin s) $ S.fromList plugins",
+    "source": "github.com/balsoft/lambda-launcher",
+    "numChars": 76
+  },
+  {
+    "text": "anyTriggered = any  ((== 0) . priority) newResults",
+    "source": "github.com/balsoft/lambda-launcher",
+    "numChars": 50
+  },
+  {
+    "text": "if gsVelocityY /= 0 && snd gsMainCharacter == snd newMainCharacter",
+    "source": "github.com/cvogt/2020-07-01-haskell-game-demo",
+    "numChars": 66
+  },
+  {
+    "text": "instance ToJSON Board where toJSON = toJSON . mapToList . unBoard",
+    "source": "github.com/cvogt/2020-07-01-haskell-game-demo",
+    "numChars": 65
+  },
+  {
+    "text": "resolveDef (XObj (Lst [XObj DefDynamic _ _, _, value]) _ _) = value",
+    "source": "github.com/carp-lang/Carp",
+    "numChars": 67
+  },
+  {
+    "text": "strL <- Parsec.many (Parsec.try escaped <|> simple)",
+    "source": "github.com/carp-lang/Carp",
+    "numChars": 51
+  },
+  {
+    "text": "t = FuncTy [RefTy (StructTy concreteArray [VarTy \"t\"]) (VarTy \"q\"), IntTy, VarTy \"t\"] UnitTy StaticLifetimeTy",
+    "source": "github.com/carp-lang/Carp",
+    "numChars": 109
+  },
+  {
+    "text": "False -> vcat $ map (\\(i, loc) -> brackets (int i) <+> ppr loc) $ IntMap.toAscList locs",
+    "source": "gitlab.haskell.org/ghc",
+    "numChars": 87
+  },
+  {
+    "text": "mtags <- mapM listModuleTags (map GHC.ms_mod $ GHC.mgModSummaries graph)",
+    "source": "gitlab.haskell.org/ghc",
+    "numChars": 72
+  },
+  {
+    "text": "mkItblEnv :: [(Name,ItblPtr)] -> ItblEnv",
+    "source": "gitlab.haskell.org/ghc",
+    "numChars": 40
+  },
+  {
+    "text": "simplify f (Or xs) = mkOr (map (\\(L l x) -> L l (simplify f x)) xs)",
+    "source": "gitlab.haskell.org/ghc",
+    "numChars": 67
+  },
+  {
+    "text": "toList ((ch, val):rest) = (T.pack $ ch : (fst <$> matching), val) : toList remaining",
+    "source": "github.com/jtdaugherty/brick",
+    "numChars": 84
+  },
+  {
+    "text": "let results = catMaybes $ (\n -> M.lookup n m) <$> (AttrName <$> (inits ns))",
+    "source": "github.com/jtdaugherty/brick",
+    "numChars": 76
+  },
+  {
+    "text": "prefixed, notPrefixed) = partition isPrefixed $ filter match allNames",
+    "source": "github.com/matterhorn-chat/matterhorn",
+    "numChars": 69
+  },
+  {
+    "text": "andProcessWith (NotifyUserAndServer p1) (NotifyUserAndServer p2) = NotifyUserAndServer (p1 <> p2)",
+    "source": "github.com/matterhorn-chat/matterhorn",
+    "numChars": 97
+  },
+  {
+    "text": "postOp (NotifyUserAndServer p) = updateViewed False >> maybeRingBell >> mapM_ maybeNotify p",
+    "source": "github.com/matterhorn-chat/matterhorn",
+    "numChars": 91
+  },
+  {
+    "text": "fetchAllSongs = mpdReq $ search (Artist =? fromString \"\"",
+    "source": "github.com/elaye/mushu",
+    "numChars": 56
+  },
+  {
+    "text": "import Control.Exception.Safe (Exception(..))",
+    "source": "github.com/elaye/mushu",
+    "numChars": 45
+  },
+  {
+    "text": "B.continue . filterResults $ st & stFocus %~ BF.focusNext",
+    "source": "github.com/andrevdm/bhoogle",
+    "numChars": 57
+  },
+  {
+    "text": "2 |> label \"Category    \" @@= editTextField (project . category) ProjectCat (Just 1)",
+    "source": "github.com/kowainik/summoner",
+    "numChars": 84
+  },
+  {
+    "text": "then setFormFocus ProjectDesc $ mkForm $ formState f & project . desc %~ (<> \"\n\n\")",
+    "source": "github.com/kowainik/summoner",
+    "numChars": 84
+  },
+  {
+    "text": "setValidation field = setFieldValid (field `notElem` wrongFields) field",
+    "source": "github.com/kowainik/summoner",
+    "numChars": 71
+  },
+  {
+    "text": "validateEmpty = liftValidation EmptyFields validateFields",
+    "source": "github.com/kowainik/summoner",
+    "numChars": 57
+  },
+  {
+    "text": "deriving newtype (Eq, Hashable, IsString, ToJSON)",
+    "source": "github.com/kowainik/stan",
+    "numChars": 49
+  },
+  {
+    "text": "checkWith f (a:as) (b:bs) = f a b && checkWith f as bs",
+    "source": "github.com/kowainik/stan",
+    "numChars": 54
+  },
+  {
+    "text": "(|::) :: NameMeta -> [PatternType] -> PatternType",
+    "source": "github.com/kowainik/stan",
+    "numChars": 49
+  },
+  {
+    "text": "dimap :: (in2 -> in1) -> (out1 -> out2) -> Fun m in1 out1 -> Fun m in2 out2",
+    "source": "github.com/kowainik/prolens",
+    "numChars": 75
+  },
+  {
+    "text": "first (Fun amb) = Fun (\\(a, c) -> fmap (, c) (amb a))",
+    "source": "github.com/kowainik/prolens",
+    "numChars": 53
+  },
+  {
+    "text": "{-# INLINE withColourMode #-}",
+    "source": "github.com/kowainik/colourista",
+    "numChars": 29
+  },
+  {
+    "text": "supportsANSI <- hSupportsANSIWithoutEmulation handle",
+    "source": "github.com/kowainik/colourista",
+    "numChars": 52
+  },
+  {
+    "text": "(>$) :: b -> LogAction m b -> LogAction m a",
+    "source": "github.com/kowainik/co-log",
+    "numChars": 43
+  },
+  {
+    "text": "':$$: 'Text \"  * (>$) :: b -> LogAction m b -> LogAction m a",
+    "source": "github.com/kowainik/co-log",
+    "numChars": 60
+  },
+  {
+    "text": "filterBySeverity s fs = cfilter (\\u0007 -> fs a >= s)",
+    "source": "github.com/kowainik/co-log",
+    "numChars": 48
+  },
+  {
+    "text": "seaweedVersion = intercalate \"\n\" $ [sVersion, sHash, sDate] ++ [sDirty | $(gitDirty)]",
+    "source": "github.com/kowainik/seaweed",
+    "numChars": 86
+  },
+  {
+    "text": "drawEntries State {_focus = x, _entries = es} = map (\\e -> drawEntry (Just (_id e) == x) e) es",
+    "source": "github.com/evuez/ttyme",
+    "numChars": 94
+  },
+  {
+    "text": "cost = padLeft T.Max . str $ \"$\" ++ show ((round $ hours e * rate e) :: Int)",
+    "source": "github.com/evuez/ttyme",
+    "numChars": 76
+  },
+  {
+    "text": "Entry <$> (v .: \"id\") <*> (v .: \"spent_date\") <*> (v .: \"project\")",
+    "source": "github.com/evuez/ttyme",
+    "numChars": 66
+  },
+  {
+    "text": "inner  = if _facedir dc == FaceDown then Nothing else Just (_card dc)",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 69
+  },
+  {
+    "text": "initialDeal = [ Card r s | r <- allRanks, s <- allSuits ]",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 57
+  },
+  {
+    "text": "bsIntersectT = toEnum 0x252C , bsIntersectB = toEnum 0x2534",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 59
+  },
+  {
+    "text": "drawField f = (stock <=> waste) <+> vBorder <+> tableau",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 55
+  },
+  {
+    "text": "foundation = reportExtent FoundX $ rrPiles NS NS $ _found f",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 59
+  },
+  {
+    "text": "findSpot pLenses c f = findIndex (\\pL -> canPlace c (f ^. pL)) pLenses",
+    "source": "github.com/ambuc/solitaire",
+    "numChars": 70
+  }
+]
