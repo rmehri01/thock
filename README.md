@@ -22,7 +22,7 @@ stack install thock
 
 ## Usage
  | English/Haskell | Russian | Description | Game State
- | - | - | -
+ | - | - | - | -
  | `Esc`        | `Esc`        | go back | Any
  | `^r`         | `^к`         | retry | Practice
  | `^n / Enter` | `^т / Enter` | next quote | Practice
