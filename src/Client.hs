@@ -32,16 +32,15 @@ createClientApp isCreating mqs formData@(RoomFormData (Username user) room) conn
   _ <- sendJsonData conn (formData, isCreating, mqs)
 
   if isCreating
-    then startRoom []
+    then startRoom (fromMaybe English mqs) []
     else do
       res <- receiveJsonData conn
       case res of
-        Right others -> startRoom others
+        Right (qs, others) -> startRoom qs others
         Left msg -> return $ Just msg -- Stop connection due to error message received from server
   where
-    qs = fromMaybe English mqs
     localSt = RoomClientState user False
-    startRoom others = do
+    startRoom qs others = do
       connChan <- newBChan 10
       -- fork a thread that writes custom events when received from server
       _ <-

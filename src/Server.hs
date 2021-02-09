@@ -90,7 +90,7 @@ serverApp mState pending = do
   where
     mkClient u c = RoomClient (RoomClientState u False) c
     getData c = receiveJsonData c :: IO (RoomFormData, Bool, Maybe QuotesSet)
-    sendData c d = sendJsonData c (d :: Either T.Text [RoomClientState])
+    sendData c d = sendJsonData c (d :: Either T.Text (QuotesSet, [RoomClientState]))
     hasRoom r s = not $ Map.member r (s ^. rooms)
     mkRoom c oc r qs cl = flip finally oc $ do
       modifyMVar_ mState $ \s -> return $ createRoom r qs cl s
@@ -99,8 +99,8 @@ serverApp mState pending = do
       modifyMVar_ mState $ \s -> do
         let s' = addRoomClient r cl s
         let m = (s' ^. rooms) Map.! r
-        let rsExceptUser = deleteFirstEqualUsername u $ snd m
-        sendData c $ Right $ map (^. state) rsExceptUser
+        let rsExceptUser = second (deleteFirstEqualUsername u) m
+        sendData c . Right $ second (map (^. state)) rsExceptUser
         roomBroadcastExceptSending r u s'
         return s'
       talk c mState r
