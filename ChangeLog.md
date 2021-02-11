@@ -1,5 +1,9 @@
 # Changelog for thock
 
+## 0.3.0.0
+
+- [#13](https://github.com/rmehri01/thock/pull/13) Add support for Russian and Haskell quotes thanks to [@dedifferentiator](https://github.com/dedifferentiator).
+
 ## 0.2.1.0
 
 Bug fixes:
