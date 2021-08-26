@@ -71,7 +71,6 @@ findSet qs xs = find ((== getPath qs) . fst) xs >>= snd
       Portuguese -> "quotes_br.json"
       Haskell -> "quotes_hask.json"
 
-
 -- | Produces a random element in the given list
 randomElem :: [a] -> IO a
 randomElem xs = (xs !!) <$> randomRIO (0, length xs - 1)
