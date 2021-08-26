@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9cb165011fe44426597641d764251e9447f52b3b5c386c8fec94525f0b4cfa3e
+-- hash: 7c80368c891521abdaa8eda0e7eb470f65d10ce5ded8e4f2831e65c2a13139cf
 
 name:           thock
 version:        0.3.0.0
@@ -42,7 +42,8 @@ library
       Paths_thock
   hs-source-dirs:
       src
-  default-extensions: FlexibleContexts OverloadedStrings TypeApplications
+  default-extensions:
+      FlexibleContexts OverloadedStrings TypeApplications
   build-depends:
       aeson >=1.5.5.1 && <1.6
     , base >=4.7 && <5
@@ -54,10 +55,10 @@ library
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
     , text >=1.2.3.0 && <1.3
-    , text-zipper >=0.11 && <0.12
+    , text-zipper ==0.11.*
     , time >=1.9.3 && <1.10
     , vector >=0.12.1.2 && <0.13
-    , vty >=5.32 && <5.33
+    , vty ==5.32.*
     , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
@@ -67,7 +68,8 @@ executable server
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: FlexibleContexts OverloadedStrings TypeApplications
+  default-extensions:
+      FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.5.5.1 && <1.6
@@ -80,11 +82,11 @@ executable server
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
     , text >=1.2.3.0 && <1.3
-    , text-zipper >=0.11 && <0.12
+    , text-zipper ==0.11.*
     , thock
     , time >=1.9.3 && <1.10
     , vector >=0.12.1.2 && <0.13
-    , vty >=5.32 && <5.33
+    , vty ==5.32.*
     , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
@@ -94,7 +96,8 @@ executable thock
       Paths_thock
   hs-source-dirs:
       app
-  default-extensions: FlexibleContexts OverloadedStrings TypeApplications
+  default-extensions:
+      FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -O3 -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.5.5.1 && <1.6
@@ -107,11 +110,11 @@ executable thock
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
     , text >=1.2.3.0 && <1.3
-    , text-zipper >=0.11 && <0.12
+    , text-zipper ==0.11.*
     , thock
     , time >=1.9.3 && <1.10
     , vector >=0.12.1.2 && <0.13
-    , vty >=5.32 && <5.33
+    , vty ==5.32.*
     , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010
 
@@ -122,7 +125,8 @@ test-suite thock-test
       Paths_thock
   hs-source-dirs:
       test
-  default-extensions: FlexibleContexts OverloadedStrings TypeApplications
+  default-extensions:
+      FlexibleContexts OverloadedStrings TypeApplications
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
       aeson >=1.5.5.1 && <1.6
@@ -135,10 +139,10 @@ test-suite thock-test
     , network >=3.1.1.1 && <3.2
     , random ==1.1.*
     , text >=1.2.3.0 && <1.3
-    , text-zipper >=0.11 && <0.12
+    , text-zipper ==0.11.*
     , thock
     , time >=1.9.3 && <1.10
     , vector >=0.12.1.2 && <0.13
-    , vty >=5.32 && <5.33
+    , vty ==5.32.*
     , websockets >=0.12.7.1 && <0.13
   default-language: Haskell2010

@@ -27,6 +27,7 @@ data QuotesSet
   = English
   | Russian
   | Haskell
+  | Portuguese
   deriving (Eq, Generic, Show)
 
 instance FromJSON QuotesSet
@@ -67,6 +68,7 @@ findSet qs xs = find ((== getPath qs) . fst) xs >>= snd
     getPath set = case set of
       English -> "quotes_en.json"
       Russian -> "quotes_ru.json"
+      Portuguese -> "quotes_br.json"
       Haskell -> "quotes_hask.json"
 
 -- | Produces a random element in the given list

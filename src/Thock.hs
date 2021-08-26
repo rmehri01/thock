@@ -224,7 +224,7 @@ onlineSelectLang = OnlineSelectLang langList
 
 -- | Creates a `QuotesSet` menu
 langList :: L.GenericList ResourceName Vec.Vector T.Text
-langList = L.list Ordinary (Vec.fromList ["English", "Russian", "Haskell"]) 3
+langList = L.list Ordinary (Vec.fromList ["English", "Russian", "Portuguese", "Haskell"]) 4
 
 -- | Randomly generates an alphanumeric 'RoomId'
 generateRoomId :: IO RoomId
