@@ -162,6 +162,7 @@ handleKeyPracLang l (VtyEvent e) = case e of
     | Just i <- L.listSelected l -> ng $ case i of
       0 -> English
       1 -> Russian
+      2 -> Portuguese
       _ -> Haskell
   ev -> M.continue . PracticeSelectLang =<< L.handleListEvent ev l
   where
@@ -175,6 +176,7 @@ handleKeyOnlineLang l (VtyEvent e) = case e of
     | Just i <- L.listSelected l -> ng $ case i of
       0 -> English
       1 -> Russian
+      2 -> Portuguese
       _ -> Haskell
   ev -> M.continue . OnlineSelectLang =<< L.handleListEvent ev l
   where
